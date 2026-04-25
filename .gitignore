@@ -53,3 +53,6 @@ upload-keystore.jks
 /test
 /web
 /windows
+
+# FVM Version Cache
+.fvm/
