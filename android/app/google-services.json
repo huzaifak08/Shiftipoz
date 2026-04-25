@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "143346915087",
+    "project_id": "shiftipoz",
+    "storage_bucket": "shiftipoz.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:143346915087:android:397e4353404792b5a7507a",
+        "android_client_info": {
+          "package_name": "com.firoz.shiftipoz"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAq0GsJewLbcBtIIGiL0ylHX1apY9n2wz8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
