@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shiftipoz/components/custom_button.dart';
 import 'package:shiftipoz/components/custom_text_field.dart';
 import 'package:shiftipoz/providers/auth_provider/auth_provider.dart'; // Adjust path
 import 'package:shiftipoz/services/auth_service.dart'; // For AuthResult enum
@@ -182,7 +183,12 @@ class _SignInViewState extends ConsumerState<SignInView> {
                   const SizedBox(height: 40),
 
                   // Sign In Button
-                  _buildSignInButton(authState.isLoading, theme),
+                  CustomButton(
+                    isLoading: authState.isLoading,
+                    theme: theme,
+                    title: "Sign in",
+                    onPressed: _handleSignIn,
+                  ),
 
                   const SizedBox(height: 32),
 
@@ -256,37 +262,6 @@ class _SignInViewState extends ConsumerState<SignInView> {
           fontWeight: FontWeight.bold,
           color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
         ),
-      ),
-    );
-  }
-
-  Widget _buildSignInButton(bool isLoading, ThemeData theme) {
-    return SizedBox(
-      width: double.infinity,
-      height: 60,
-      child: ElevatedButton(
-        onPressed: isLoading ? null : _handleSignIn,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: theme.colorScheme.primary,
-          foregroundColor: theme.colorScheme.onPrimary,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          elevation: 0,
-        ),
-        child: isLoading
-            ? const SizedBox(
-                height: 24,
-                width: 24,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2,
-                ),
-              )
-            : const Text(
-                "Sign In",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
       ),
     );
   }

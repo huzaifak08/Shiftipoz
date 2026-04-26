@@ -1,10 +1,7 @@
-name: Shiftipoz Release CI
+name: Shiftipoz Play Store & GitHub Release
 
 on:
   push:
-    branches:
-      - master
-  pull_request:
     branches:
       - master
 
@@ -18,40 +15,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 1. Setup Java 17
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: "zulu"
           java-version: "17"
 
-      # 2. Setup Flutter
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: "stable"
 
-      # 3. Decode Keystore from Secrets
       - name: Decode Keystore
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload-keystore.jks
 
       - name: Install Dependencies
         run: flutter pub get
 
-      # 4. Build Signed APK
-      - name: Build APK
-        env:
-          RUN_NUMBER: ${{ github.run_number }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: |
-          BUILD_NUMBER=$((RUN_NUMBER + 8))
-          flutter build apk --release \
-          --build-name=0.0.8 \
-          --build-number=$BUILD_NUMBER
-
-      # 5. Build Signed App Bundle (AAB)
+      # Build the AAB (Required for Play Store)
       - name: Build App Bundle
         env:
           RUN_NUMBER: ${{ github.run_number }}
@@ -59,31 +40,45 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          BUILD_NUMBER=$((RUN_NUMBER + 8))
+          BUILD_NUMBER=$((RUN_NUMBER + 10))
           flutter build appbundle --release \
-          --build-name=0.0.8 \
+          --build-name=1.0.0 \
           --build-number=$BUILD_NUMBER
 
-      # 6. Save Artifacts to Actions Tab (Internal Backup)
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-builds
-          path: |
-            build/app/outputs/flutter-apk/*.apk
-            build/app/outputs/bundle/release/*.aab
+      # Build the APK (For GitHub Release)
+      - name: Build APK
+        env:
+          RUN_NUMBER: ${{ github.run_number }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          BUILD_NUMBER=$((RUN_NUMBER + 10))
+          flutter build apk --release \
+          --build-name=1.0.0 \
+          --build-number=$BUILD_NUMBER
 
-      # 7. Create the Public Release (VISIBLE ON REPO SIDEBAR)
+      # 1. Create GitHub Release
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             build/app/outputs/flutter-apk/app-release.apk
             build/app/outputs/bundle/release/app-release.aab
-          tag_name: v0.0.8-b${{ github.run_number }}
-          name: Shiftipoz v0.0.8 (Build ${{ github.run_number }})
+          tag_name: v1.0.0-b${{ github.run_number }}
+          name: Shiftipoz v1.0.0 (Build ${{ github.run_number }})
           draft: false
-          prerelease: false
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 2. Upload to Google Play (Internal Track)
+      - name: Upload to Play Store
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_CONFIG_JSON }}
+          packageName: com.firoz.shiftipoz
+          releaseFiles: build/app/outputs/bundle/release/app-release.aab
+          track: internal
+          status: completed
+          whatsNewDirectory: distribution/whatsnew # Folder for release notes

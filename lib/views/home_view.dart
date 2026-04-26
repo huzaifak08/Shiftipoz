@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shake_detector/shake_detector.dart';
-import 'package:shiftipoz/cache/tables/user_table.dart';
 import 'package:shiftipoz/providers/auth_provider/auth_provider.dart';
-import 'package:shiftipoz/providers/user_provider/user_provider.dart';
 import 'package:shiftipoz/views/auth/sign_in_view.dart';
+import 'package:shiftipoz/views/profile_view.dart';
 
 class HomeView extends ConsumerStatefulWidget {
   const HomeView({super.key});
@@ -260,57 +259,6 @@ class _HomeViewState extends ConsumerState<HomeView> {
 
   // ---------------- UI ----------------
 
-  // Logout:
-  void _handleLogout(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Logout"),
-        content: const Text(
-          "Are you sure you want to sign out? Local cache will be preserved.",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              // 1. Clear the Singleton
-
-              // 2. Clear Local SQLite Cache (Crucial for security)
-              await UserTable.clearAllUsers();
-              // await LedgerTable.deleteAllLedgers();
-
-              // 3. Invalidate Providers (This resets their state to default/loading)
-              // Todo: This will trigger the build() methods to run again and see 'null' user
-              ref.invalidate(userProvider);
-              // ref.invalidate(projectNotifierProvider);
-              // ref.invalidate(ledgerNotifierProvider);
-
-              // 4. Perform Firebase Logout
-              await ref.read(authControllerProvider.notifier).logout();
-
-              // 5. Navigate to Sign In
-              if (context.mounted) {
-                // Navigator.pushAndRemoveUntil(
-                //   context,
-                //   MaterialPageRoute(builder: (context) => const SignInView()),
-                //   (route) => false,
-                // );
-                Navigator.pop(context);
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primary,
-            ),
-            child: Text("Logout", style: TextStyle(color: Colors.black)),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
@@ -384,12 +332,15 @@ class _HomeViewState extends ConsumerState<HomeView> {
 
           IconButton(
             onPressed: () {
-              ref.watch(authControllerProvider).value != null
-                  ? _handleLogout(context)
-                  : Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => SignInView()),
-                    );
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      ref.watch(authControllerProvider).value != null
+                      ? ProfileView()
+                      : SignInView(),
+                ),
+              );
             },
             icon: Icon(
               ref.watch(authControllerProvider).value != null

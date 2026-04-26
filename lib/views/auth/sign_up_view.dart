@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shiftipoz/components/custom_button.dart';
 import 'package:shiftipoz/components/custom_text_field.dart';
 import 'package:shiftipoz/providers/auth_provider/auth_provider.dart'; // Adjust path
 import 'package:shiftipoz/services/auth_service.dart';
@@ -148,7 +149,12 @@ class _SignUpViewState extends ConsumerState<SignUpView> {
                   const SizedBox(height: 40),
 
                   // Sign Up Button
-                  _buildSignUpButton(authState.isLoading, theme),
+                  CustomButton(
+                    isLoading: authState.isLoading,
+                    theme: theme,
+                    title: "Register Now",
+                    onPressed: _handleSignUp,
+                  ),
 
                   const SizedBox(height: 24),
 
@@ -230,37 +236,6 @@ class _SignUpViewState extends ConsumerState<SignUpView> {
           fontWeight: FontWeight.bold,
           color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
         ),
-      ),
-    );
-  }
-
-  Widget _buildSignUpButton(bool isLoading, ThemeData theme) {
-    return SizedBox(
-      width: double.infinity,
-      height: 60,
-      child: ElevatedButton(
-        onPressed: isLoading ? null : _handleSignUp,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: theme.colorScheme.primary,
-          foregroundColor: theme.colorScheme.onPrimary,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          elevation: 0,
-        ),
-        child: isLoading
-            ? const SizedBox(
-                height: 24,
-                width: 24,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2,
-                ),
-              )
-            : const Text(
-                "Register Now",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
       ),
     );
   }
