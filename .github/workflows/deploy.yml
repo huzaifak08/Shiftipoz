@@ -1,0 +1,70 @@
+name: Flutter Build Test (No Upload)
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v3
+        with:
+          distribution: "zulu"
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+
+      # 1. Decode Keystore from Secrets
+      - name: Decode Keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload-keystore.jks
+
+      - run: flutter pub get
+
+      # 2. Build Signed APK
+      # We add +8 to the build number to ensure it exceeds your current (7)
+      - name: Build APK
+        run: |
+          flutter build apk --release \
+          --build-name=0.0.8 \
+          --build-number=$(( github.run_number + 8 )) \
+          --dart-define=KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }} \
+          --dart-define=KEY_ALIAS=${{ secrets.KEY_ALIAS }} \
+          --dart-define=KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}
+
+      # 3. Build Signed App Bundle (AAB)
+      - name: Build App Bundle
+        run: |
+          flutter build appbundle --release \
+          --build-name=0.0.8 \
+          --build-number=$(( github.run_number + 8 ))
+
+      # 4. Save Artifacts (So you can download and test them)
+      - name: Upload Artifacts for Inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-builds
+          path: |
+            build/app/outputs/flutter-apk/*.apk
+            build/app/outputs/bundle/release/*.aab
+
+      # 5. Create GitHub Release (Draft)
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/bundle/release/app-release.aab
+          tag_name: v0.0.8-build-${{ github.run_number }}
+          name: Release v0.0.8 (Test)
+          draft: true # Keeps it hidden until you are ready
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
