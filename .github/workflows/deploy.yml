@@ -1,4 +1,4 @@
-name: Flutter Build Test (No Upload)
+name: Shiftipoz Release CI
 
 on:
   push:
@@ -9,8 +9,8 @@ on:
       - master
 
 permissions:
-  contents: write # Allows creating tags and releases
-  packages: write # Optional, but good to have
+  contents: write
+  packages: write
 
 jobs:
   build:
@@ -32,7 +32,6 @@ jobs:
           channel: "stable"
 
       # 3. Decode Keystore from Secrets
-      # This creates the .jks file that your build.gradle.kts is looking for
       - name: Decode Keystore
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload-keystore.jks
 
@@ -40,7 +39,6 @@ jobs:
         run: flutter pub get
 
       # 4. Build Signed APK
-      # We use 'env' to make secrets available to the Gradle process
       - name: Build APK
         env:
           RUN_NUMBER: ${{ github.run_number }}
@@ -66,7 +64,7 @@ jobs:
           --build-name=0.0.8 \
           --build-number=$BUILD_NUMBER
 
-      # 6. Save Artifacts to GitHub Actions Tab
+      # 6. Save Artifacts to Actions Tab (Internal Backup)
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -75,15 +73,17 @@ jobs:
             build/app/outputs/flutter-apk/*.apk
             build/app/outputs/bundle/release/*.aab
 
-      # 7. Create a Draft Release on GitHub
+      # 7. Create the Public Release (VISIBLE ON REPO SIDEBAR)
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             build/app/outputs/flutter-apk/app-release.apk
             build/app/outputs/bundle/release/app-release.aab
-          tag_name: v0.0.8-build-${{ github.run_number }}
-          name: Release v0.0.8 (Build ${{ github.run_number }})
-          draft: true
+          tag_name: v0.0.8-b${{ github.run_number }}
+          name: Shiftipoz v0.0.8 (Build ${{ github.run_number }})
+          draft: false
+          prerelease: false
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
