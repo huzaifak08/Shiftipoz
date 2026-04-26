@@ -31,21 +31,32 @@ jobs:
 
       # 2. Build Signed APK
       # We add +8 to the build number to ensure it exceeds your current (7)
+      # 2. Build Signed APK
       - name: Build APK
+        env:
+          # This maps the GitHub context variable to a shell variable
+          RUN_NUMBER: ${{ github.run_number }}
         run: |
+          # Perform the math inside the shell
+          BUILD_NUMBER=$((RUN_NUMBER + 8))
+
           flutter build apk --release \
           --build-name=0.0.8 \
-          --build-number=$(( github.run_number + 8 )) \
+          --build-number=$BUILD_NUMBER \
           --dart-define=KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }} \
           --dart-define=KEY_ALIAS=${{ secrets.KEY_ALIAS }} \
           --dart-define=KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}
 
       # 3. Build Signed App Bundle (AAB)
       - name: Build App Bundle
+        env:
+          RUN_NUMBER: ${{ github.run_number }}
         run: |
+          BUILD_NUMBER=$((RUN_NUMBER + 8))
+
           flutter build appbundle --release \
           --build-name=0.0.8 \
-          --build-number=$(( github.run_number + 8 ))
+          --build-number=$BUILD_NUMBER
 
       # 4. Save Artifacts (So you can download and test them)
       - name: Upload Artifacts for Inspection
