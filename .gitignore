@@ -46,13 +46,7 @@ app.*.map.json
 
 #secrets
 upload-keystore.jks
-android/
-/ios
-/linux
-/macos
-/test
-/web
-/windows
+
 
 # FVM Version Cache
 .fvm/
