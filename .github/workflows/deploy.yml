@@ -79,6 +79,6 @@ jobs:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_CONFIG_JSON }}
           packageName: com.firoz.shiftipoz
           releaseFiles: build/app/outputs/bundle/release/app-release.aab
-          track: internal
+          track: production
           status: completed
-          whatsNewDirectory: distribution/whatsnew # Folder for release notes
+          whatsNewDirectory: distribution/whatsnew
