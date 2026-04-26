@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shiftipoz/components/avatar_picker.dart';
 import 'package:shiftipoz/components/custom_button.dart';
 import 'package:shiftipoz/components/custom_text_field.dart';
 import 'package:shiftipoz/providers/auth_provider/auth_provider.dart'; // Adjust path
@@ -23,6 +26,7 @@ class _SignUpViewState extends ConsumerState<SignUpView> {
   final _nameFocus = FocusNode();
   final _emailFocus = FocusNode();
   final _passwordFocus = FocusNode();
+  File? _selectedImage;
 
   bool _obscurePassword = true;
 
@@ -40,6 +44,7 @@ class _SignUpViewState extends ConsumerState<SignUpView> {
   // --- LOGIC ---
   Future<void> _handleSignUp() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_selectedImage == null) return;
 
     final result = await ref
         .read(authControllerProvider.notifier)
@@ -47,15 +52,11 @@ class _SignUpViewState extends ConsumerState<SignUpView> {
           _nameController.text.trim(),
           _emailController.text.trim(),
           _passwordController.text.trim(),
+          _selectedImage?.path ?? "No Profile Pic",
         );
 
     if (result == AuthResult.unverified) {
       if (!mounted) return;
-      // ScaffoldMessenger.of(context).showSnackBar(
-      //   const SnackBar(
-      //     content: Text("Verification email sent! Please check your inbox."),
-      //   ),
-      // );
 
       // Navigate to VerificationView or Login
       Navigator.push(
@@ -92,9 +93,19 @@ class _SignUpViewState extends ConsumerState<SignUpView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 10),
                   _buildHeader(theme),
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 35),
+
+                  AvatarPicker(
+                    onImageSelected: (file) {
+                      setState(() {
+                        _selectedImage = file; // 2. Update the local variable
+                      });
+                    },
+                  ),
+
+                  const SizedBox(height: 15),
 
                   // Name Field
                   _buildLabel("Full Name", theme),
@@ -146,7 +157,7 @@ class _SignUpViewState extends ConsumerState<SignUpView> {
                         v!.length < 6 ? "Minimum 6 characters" : null,
                   ),
 
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 25),
 
                   // Sign Up Button
                   CustomButton(
@@ -156,7 +167,7 @@ class _SignUpViewState extends ConsumerState<SignUpView> {
                     onPressed: _handleSignUp,
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 10),
 
                   // Footer Link
                   Center(

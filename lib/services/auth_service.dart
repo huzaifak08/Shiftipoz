@@ -34,6 +34,7 @@ class AuthService {
     required String name,
     required String email,
     required String password,
+    required String profilePic,
   }) async {
     try {
       dev.log("Starting registration: $email", name: "AuthService");
@@ -50,6 +51,7 @@ class AuthService {
           name: name,
           email: email,
           password: password,
+          profilePic: profilePic,
           createdAt: DateTime.now(),
           isEmailVerified: false,
           isSynced: true,

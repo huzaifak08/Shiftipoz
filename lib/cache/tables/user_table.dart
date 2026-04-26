@@ -12,6 +12,7 @@ class UserTable {
         name TEXT NOT NULL,
         email TEXT NOT NULL,
         password TEXT,
+        profilePic TEXT,
         createdAt TEXT NOT NULL,
         isEmailVerified INTEGER NOT NULL,
         isSynced INTEGER NOT NULL,

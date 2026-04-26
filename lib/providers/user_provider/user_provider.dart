@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shiftipoz/cache/tables/user_table.dart';
 import 'package:shiftipoz/models/user_model.dart';
@@ -81,6 +83,39 @@ class UserNotifier extends _$UserNotifier {
     } catch (e) {
       dev.log("Failed to sync user update: $e");
       // Optional: Rollback or keep as unsynced for later
+    }
+  }
+
+  /// Transforms a raw file into a URL and leverages existing sync logic
+  Future<void> changeProfilePicture(File imageFile) async {
+    final currentUser = state.value;
+    if (currentUser == null) return;
+
+    try {
+      // 1. Upload file to get the URL (This is the only 'new' step)
+      final imageUrl = await _userService.uploadProfilePic(
+        currentUser.uid,
+        imageFile,
+      );
+
+      if (imageUrl != null) {
+        // 2. Create the updated model with the new URL
+        final updatedUser = currentUser.copyWith(profilePic: imageUrl);
+
+        // 3. REUSE your existing logic!
+        // This handles: Cache update -> UI state change -> Firestore sync
+        await updateProfile(updatedUser);
+
+        dev.log(
+          "UserProvider: Profile picture synced via updateProfile",
+          name: "UserProvider",
+        );
+      }
+    } catch (e) {
+      dev.log(
+        "UserProvider: Change profile pic failed: $e",
+        name: "UserProvider",
+      );
     }
   }
 

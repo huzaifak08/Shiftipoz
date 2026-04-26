@@ -34,13 +34,19 @@ class AuthController extends _$AuthController {
   }
 
   /// --- Registration Logic ---
-  Future<AuthResult?> signUp(String name, String email, String password) async {
+  Future<AuthResult?> signUp(
+    String name,
+    String email,
+    String password,
+    String profilePic,
+  ) async {
     state = const AsyncValue.loading();
     try {
       await _authService.registerWithEmail(
         name: name,
         email: email,
         password: password,
+        profilePic: profilePic,
       );
 
       // Refresh local state with the new user object

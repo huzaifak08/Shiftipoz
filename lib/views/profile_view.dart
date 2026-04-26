@@ -1,10 +1,15 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shiftipoz/cache/tables/user_table.dart';
+import 'package:shiftipoz/components/avatar_picker.dart';
 import 'package:shiftipoz/components/custom_button.dart';
+import 'package:shiftipoz/helpers/app_data.dart';
 import 'package:shiftipoz/models/user_model.dart';
 import 'package:shiftipoz/providers/auth_provider/auth_provider.dart';
 import 'package:shiftipoz/providers/user_provider/user_provider.dart';
+import 'package:shiftipoz/views/auth/verify_email_view.dart';
 import 'package:shiftipoz/views/home_view.dart';
 
 class ProfileView extends ConsumerStatefulWidget {
@@ -17,6 +22,7 @@ class ProfileView extends ConsumerStatefulWidget {
 class _ProfileViewState extends ConsumerState<ProfileView> {
   late TextEditingController _nameController;
   bool _isEditing = false;
+  File? _selectedImage;
 
   @override
   void initState() {
@@ -52,6 +58,7 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final userState = ref.watch(userProvider);
+    final auth = ref.watch(authControllerProvider).value;
 
     return Scaffold(
       appBar: AppBar(
@@ -76,7 +83,31 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
             child: Column(
               children: [
                 // Avatar Section
-                _buildAvatar(theme, user),
+                auth?.emailVerified == false
+                    ? IconButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => VerifyEmailView(),
+                            ),
+                          );
+                        },
+                        icon: Icon(
+                          Icons.warning_amber_outlined,
+                          color: Colors.amber,
+                          size: 50,
+                        ),
+                      )
+                    : AvatarPicker(
+                        initialImageUrl: user.profilePic,
+                        onImageSelected: (file) {
+                          setState(() {
+                            _selectedImage = file;
+                          });
+                        },
+                      ),
+
                 const SizedBox(height: 32),
 
                 // Personal Info Section
@@ -123,12 +154,44 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
                 ),
                 const SizedBox(height: 24),
 
-                CustomButton(
-                  isLoading: false,
-                  theme: theme,
-                  title: "Log out",
-                  onPressed: () => _handleLogout(context),
-                ),
+                _selectedImage != null
+                    ? CustomButton(
+                        isLoading: false,
+                        theme: theme,
+                        title: "Save Picture",
+                        onPressed: () async {
+                          if (_selectedImage != null) {
+                            await ref
+                                .read(userProvider.notifier)
+                                .changeProfilePicture(_selectedImage!);
+
+                            setState(() {
+                              _selectedImage = null;
+                            });
+
+                            ScaffoldMessenger.of(
+                              AppData.shared.navigatorKey.currentContext ??
+                                  context,
+                            ).showSnackBar(
+                              const SnackBar(
+                                content: Text("Profile Picture Changed"),
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("No Image Selected"),
+                              ),
+                            );
+                          }
+                        },
+                      )
+                    : CustomButton(
+                        isLoading: false,
+                        theme: theme,
+                        title: "Log out",
+                        onPressed: () => _handleLogout(context),
+                      ),
               ],
             ),
           );
@@ -138,51 +201,6 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
   }
 
   // --- UI Components ---
-
-  Widget _buildAvatar(ThemeData theme, UserModel user) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: theme.colorScheme.primary, width: 2),
-          ),
-          child: CircleAvatar(
-            radius: 50,
-            backgroundColor: theme.colorScheme.primaryContainer,
-            child: Text(
-              user.name.isNotEmpty ? user.name[0].toUpperCase() : "U",
-              style: TextStyle(
-                fontSize: 40,
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.primary,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        if (!user.isSynced)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.sync_problem,
-                size: 16,
-                color: theme.colorScheme.error,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                "Sync pending...",
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.error,
-                ),
-              ),
-            ],
-          ),
-      ],
-    );
-  }
 
   Widget _buildSectionLabel(ThemeData theme, String text) {
     return Align(

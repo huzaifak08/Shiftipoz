@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shiftipoz/providers/auth_provider/auth_provider.dart';
@@ -11,54 +10,100 @@ class VerifyEmailView extends ConsumerStatefulWidget {
   ConsumerState<VerifyEmailView> createState() => _VerifyEmailViewState();
 }
 
-class _VerifyEmailViewState extends ConsumerState<VerifyEmailView> {
-  Timer? _timer;
+class _VerifyEmailViewState extends ConsumerState<VerifyEmailView>
+    with WidgetsBindingObserver {
   bool _isResending = false;
+  bool _isCheckingVerification = false;
 
   @override
   void initState() {
     super.initState();
-    // 1. Start automatic polling every 3 seconds
-    _timer = Timer.periodic(const Duration(seconds: 3), (timer) {
-      _checkStatus();
-    });
+
+    // Listen for app foreground/background changes
+    WidgetsBinding.instance.addObserver(this);
+    ref.read(authControllerProvider.notifier).resendVerification();
   }
 
   @override
   void dispose() {
-    _timer?.cancel(); // 🔥 Crucial: Stop timer when leaving screen
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
-  Future<void> _checkStatus() async {
-    // This method reloads the Firebase User and updates the Provider state
-    await ref.read(authControllerProvider.notifier).refreshUserStatus();
+  /// Called whenever app lifecycle changes.
+  /// When user returns to app from email/browser,
+  /// automatically re-check verification.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkVerificationStatus(fromLifecycle: true);
+    }
+  }
 
-    // If the provider now says the user is verified, navigate
-    final user = ref.read(authControllerProvider).value;
-    if (user != null && user.emailVerified) {
-      _timer?.cancel();
-      if (mounted) {
-        // Use pushAndRemoveUntil to clear auth stack
+  Future<void> _checkVerificationStatus({bool fromLifecycle = false}) async {
+    if (_isCheckingVerification || !mounted) return;
+
+    _isCheckingVerification = true;
+
+    try {
+      // Reload firebase user through provider
+      await ref.read(authControllerProvider.notifier).refreshUserStatus();
+
+      final user = ref.read(authControllerProvider).value;
+
+      if (!mounted) return;
+
+      if (user != null && user.emailVerified) {
         Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const HomeView()),
+          MaterialPageRoute(builder: (_) => const HomeView()),
           (route) => false,
         );
+        return;
       }
+
+      // Only show snackbar if not verified
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            fromLifecycle
+                ? "Email not verified yet. Please verify first."
+                : "Still not verified. Please check your email.",
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Could not verify status. Try again."),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      _isCheckingVerification = false;
     }
   }
 
   Future<void> _handleResend() async {
     setState(() => _isResending = true);
 
-    // Trigger the resend via your provider/service
-    await ref.read(authControllerProvider.notifier).resendVerification();
+    try {
+      await ref.read(authControllerProvider.notifier).resendVerification();
 
-    if (mounted) {
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Verification email resent!")),
+        const SnackBar(
+          content: Text("Verification email resent!"),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
-      setState(() => _isResending = false);
+    } finally {
+      if (mounted) {
+        setState(() => _isResending = false);
+      }
     }
   }
 
@@ -77,7 +122,7 @@ class _VerifyEmailViewState extends ConsumerState<VerifyEmailView> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withOpacity(0.1),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -86,31 +131,37 @@ class _VerifyEmailViewState extends ConsumerState<VerifyEmailView> {
                   color: theme.colorScheme.primary,
                 ),
               ),
+
               const SizedBox(height: 40),
+
               Text(
                 "Verify your Email",
                 style: theme.textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
+
               const SizedBox(height: 16),
+
               Text(
                 "We've sent a verification link to your email address. Please click the link to secure your account.",
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurface.withOpacity(0.7),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                   height: 1.5,
                 ),
               ),
+
               const SizedBox(height: 24),
 
-              // 📝 THE SPAM NOTE
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.amber.withOpacity(0.1),
+                  color: Colors.amber.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.amber.withOpacity(0.3)),
+                  border: Border.all(
+                    color: Colors.amber.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -132,16 +183,26 @@ class _VerifyEmailViewState extends ConsumerState<VerifyEmailView> {
                   ],
                 ),
               ),
+
               const SizedBox(height: 48),
 
-              // Main Action: Manual Check
               SizedBox(
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton.icon(
-                  onPressed: _checkStatus,
-                  icon: const Icon(Icons.verified_user_rounded),
-                  label: const Text("I'VE VERIFIED"),
+                  onPressed: _isCheckingVerification
+                      ? null
+                      : () => _checkVerificationStatus(),
+                  icon: _isCheckingVerification
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.verified_user_rounded),
+                  label: Text(
+                    _isCheckingVerification ? "CHECKING..." : "I'VE VERIFIED",
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: theme.colorScheme.primary,
                     foregroundColor: theme.colorScheme.onPrimary,
@@ -151,9 +212,9 @@ class _VerifyEmailViewState extends ConsumerState<VerifyEmailView> {
                   ),
                 ),
               ),
+
               const SizedBox(height: 16),
 
-              // Resend Button
               TextButton(
                 onPressed: _isResending ? null : _handleResend,
                 child: _isResending
@@ -170,19 +231,25 @@ class _VerifyEmailViewState extends ConsumerState<VerifyEmailView> {
                         ),
                       ),
               ),
+
               const SizedBox(height: 30),
 
-              // Safety Exit: Logout
               TextButton.icon(
                 onPressed: () async {
-                  _timer?.cancel();
                   await ref.read(authControllerProvider.notifier).logout();
-                  if (context.mounted) Navigator.of(context).pop();
+
+                  if (!context.mounted) {
+                    return;
+                  }
+
+                  Navigator.of(context).pop();
                 },
                 icon: const Icon(Icons.logout_rounded, size: 18),
                 label: const Text("Use a different email"),
                 style: TextButton.styleFrom(
-                  foregroundColor: theme.colorScheme.onSurface.withOpacity(0.5),
+                  foregroundColor: theme.colorScheme.onSurface.withValues(
+                    alpha: 0.5,
+                  ),
                 ),
               ),
             ],
