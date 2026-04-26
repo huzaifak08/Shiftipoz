@@ -14,52 +14,56 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v3
+      # 1. Setup Java 17
+      - name: Setup Java
+        uses: actions/setup-java@v4
         with:
           distribution: "zulu"
           java-version: "17"
 
-      - uses: subosito/flutter-action@v2
+      # 2. Setup Flutter
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
           channel: "stable"
 
-      # 1. Decode Keystore from Secrets
+      # 3. Decode Keystore from Secrets
+      # This creates the .jks file that your build.gradle.kts is looking for
       - name: Decode Keystore
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload-keystore.jks
 
-      - run: flutter pub get
+      - name: Install Dependencies
+        run: flutter pub get
 
-      # 2. Build Signed APK
-      # We add +8 to the build number to ensure it exceeds your current (7)
-      # 2. Build Signed APK
+      # 4. Build Signed APK
+      # We use 'env' to make secrets available to the Gradle process
       - name: Build APK
         env:
-          # This maps the GitHub context variable to a shell variable
           RUN_NUMBER: ${{ github.run_number }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          # Perform the math inside the shell
           BUILD_NUMBER=$((RUN_NUMBER + 8))
-
           flutter build apk --release \
           --build-name=0.0.8 \
-          --build-number=$BUILD_NUMBER \
-          --dart-define=KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }} \
-          --dart-define=KEY_ALIAS=${{ secrets.KEY_ALIAS }} \
-          --dart-define=KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}
+          --build-number=$BUILD_NUMBER
 
-      # 3. Build Signed App Bundle (AAB)
+      # 5. Build Signed App Bundle (AAB)
       - name: Build App Bundle
         env:
           RUN_NUMBER: ${{ github.run_number }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           BUILD_NUMBER=$((RUN_NUMBER + 8))
-
           flutter build appbundle --release \
           --build-name=0.0.8 \
           --build-number=$BUILD_NUMBER
 
-      # 4. Save Artifacts (So you can download and test them)
-      - name: Upload Artifacts for Inspection
+      # 6. Save Artifacts to GitHub Actions Tab
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: release-builds
@@ -67,15 +71,15 @@ jobs:
             build/app/outputs/flutter-apk/*.apk
             build/app/outputs/bundle/release/*.aab
 
-      # 5. Create GitHub Release (Draft)
+      # 7. Create a Draft Release on GitHub
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
             build/app/outputs/flutter-apk/app-release.apk
             build/app/outputs/bundle/release/app-release.aab
           tag_name: v0.0.8-build-${{ github.run_number }}
-          name: Release v0.0.8 (Test)
-          draft: true # Keeps it hidden until you are ready
+          name: Release v0.0.8 (Build ${{ github.run_number }})
+          draft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
