@@ -8,6 +8,10 @@ on:
     branches:
       - master
 
+permissions:
+  contents: write # Allows creating tags and releases
+  packages: write # Optional, but good to have
+
 jobs:
   build:
     runs-on: ubuntu-latest
