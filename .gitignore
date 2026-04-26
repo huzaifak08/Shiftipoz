@@ -46,7 +46,7 @@ app.*.map.json
 
 #secrets
 upload-keystore.jks
-/android
+android/
 /ios
 /linux
 /macos
