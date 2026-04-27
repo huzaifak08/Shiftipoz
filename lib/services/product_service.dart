@@ -11,6 +11,82 @@ class ProductService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
+  // Inside ProductService
+  Future<List<ProductModel>> fetchProductsByLocation({
+    required String userGeohash,
+    required int precision,
+    DocumentSnapshot? lastDoc,
+    bool isGlobal = false, // Add this
+  }) async {
+    try {
+      var query = _firestore
+          .collection(productsCollection)
+          .where('isAvailable', isEqualTo: true);
+
+      if (isGlobal) {
+        // 🌍 Global Search: Just order by newest
+        dev.log(
+          "🌎 GLOBAL SEARCH: Fetching newest items worldwide",
+          name: "ProductService",
+        );
+        query = query.orderBy('createdAt', descending: true);
+      } else {
+        // 📍 Proximity Search
+        final int safeLength = precision > userGeohash.length
+            ? userGeohash.length
+            : precision;
+        final String searchPrefix = userGeohash.substring(0, safeLength);
+        final String endPrefix = '$searchPrefix~';
+
+        dev.log("🔎 PROXIMITY: Prefix [$searchPrefix]", name: "ProductService");
+        query = query
+            .where('locationData.geohash', isGreaterThanOrEqualTo: searchPrefix)
+            .where('locationData.geohash', isLessThanOrEqualTo: endPrefix)
+            .orderBy('locationData.geohash');
+      }
+
+      query = query.limit(10);
+      if (lastDoc != null) query = query.startAfterDocument(lastDoc);
+
+      final snapshot = await query.get();
+      return snapshot.docs
+          .map((doc) => ProductModel.fromMap(doc.data()))
+          .toList();
+    } catch (e) {
+      dev.log("ProductService Error: $e");
+      return [];
+    }
+  }
+
+  /// --- Search Products by Title ---
+  /// Note: Firestore doesn't support 'contains'. We use 'searchTags' strategy.
+  Future<List<ProductModel>> searchProductsByTitle({
+    required String titleQuery,
+    DocumentSnapshot? lastDoc,
+  }) async {
+    try {
+      final String term = titleQuery.toLowerCase().trim();
+
+      var query = _firestore
+          .collection(productsCollection)
+          .where('searchTags', arrayContains: term)
+          .where('isAvailable', isEqualTo: true)
+          .limit(10);
+
+      if (lastDoc != null) {
+        query = query.startAfterDocument(lastDoc);
+      }
+
+      final snapshot = await query.get();
+      return snapshot.docs
+          .map((doc) => ProductModel.fromMap(doc.data()))
+          .toList();
+    } catch (e) {
+      dev.log("ProductService: Error searching by title: $e");
+      return [];
+    }
+  }
+
   /// --- 1. Multi-Image Upload ---
   /// Uploads a list of files and returns a list of download URLs
   Future<List<String>> uploadProductImages({

@@ -3,8 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shake_detector/shake_detector.dart';
 import 'package:shiftipoz/providers/auth_provider/auth_provider.dart';
-import 'package:shiftipoz/views/add_update_product_view/add_update_product_view.dart';
 import 'package:shiftipoz/views/auth/sign_in_view.dart';
+import 'package:shiftipoz/views/products_view/products_view.dart';
 import 'package:shiftipoz/views/profile_view.dart';
 
 class HomeView extends ConsumerStatefulWidget {
@@ -337,9 +337,7 @@ class _HomeViewState extends ConsumerState<HomeView> {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => AddUpdateProductView(),
-                    ),
+                    MaterialPageRoute(builder: (context) => ProductsView()),
                   );
                 },
                 icon: Icon(
