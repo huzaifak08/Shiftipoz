@@ -398,6 +398,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  flutter_geo_hash:
+    dependency: "direct main"
+    description:
+      name: flutter_geo_hash
+      sha256: ce2730c16ada5508d049e4589ed2954928d3b5ea291cdf68dcb3c2443d1a77dc
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.6"
   flutter_lints:
     dependency: "direct dev"
     description:

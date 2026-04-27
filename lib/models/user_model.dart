@@ -119,38 +119,4 @@ class UserModel {
 
   factory UserModel.fromJson(String source) =>
       UserModel.fromJsonDb(json.decode(source));
-
-  // ===================== Equality =====================
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is UserModel &&
-        other.uid == uid &&
-        other.name == name &&
-        other.email == email &&
-        other.password == password &&
-        other.profilePic == profilePic &&
-        other.createdAt == createdAt &&
-        other.isEmailVerified == isEmailVerified &&
-        other.isSynced == isSynced &&
-        other.lastSyncAttempt == lastSyncAttempt;
-  }
-
-  @override
-  int get hashCode {
-    return uid.hashCode ^
-        name.hashCode ^
-        email.hashCode ^
-        password.hashCode ^
-        profilePic.hashCode ^
-        createdAt.hashCode ^
-        isEmailVerified.hashCode ^
-        isSynced.hashCode ^
-        lastSyncAttempt.hashCode;
-  }
-
-  @override
-  String toString() {
-    return 'UserModel(uid: $uid, name: $name, isEmailVerified: $isEmailVerified, isSynced: $isSynced)';
-  }
 }

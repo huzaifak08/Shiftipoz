@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shake_detector/shake_detector.dart';
 import 'package:shiftipoz/providers/auth_provider/auth_provider.dart';
+import 'package:shiftipoz/views/add_update_product_view/add_update_product_view.dart';
 import 'package:shiftipoz/views/auth/sign_in_view.dart';
 import 'package:shiftipoz/views/profile_view.dart';
 
@@ -330,24 +331,43 @@ class _HomeViewState extends ConsumerState<HomeView> {
             ),
           ),
 
-          IconButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      ref.watch(authControllerProvider).value != null
-                      ? ProfileView()
-                      : SignInView(),
+          Row(
+            children: [
+              IconButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AddUpdateProductView(),
+                    ),
+                  );
+                },
+                icon: Icon(
+                  Icons.add,
+                  color: const Color(0xFFC0C0C0).withValues(alpha: 0.6),
                 ),
-              );
-            },
-            icon: Icon(
-              ref.watch(authControllerProvider).value != null
-                  ? Icons.logout_outlined
-                  : Icons.account_circle_outlined,
-              color: const Color(0xFFC0C0C0).withValues(alpha: 0.6),
-            ),
+              ),
+
+              IconButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          ref.watch(authControllerProvider).value != null
+                          ? ProfileView()
+                          : SignInView(),
+                    ),
+                  );
+                },
+                icon: Icon(
+                  ref.watch(authControllerProvider).value != null
+                      ? Icons.logout_outlined
+                      : Icons.account_circle_outlined,
+                  color: const Color(0xFFC0C0C0).withValues(alpha: 0.6),
+                ),
+              ),
+            ],
           ),
         ],
       ),

@@ -36,6 +36,7 @@ dependencies:
   firebase_storage: ^13.3.0
   flutter:
     sdk: flutter
+  flutter_geo_hash: ^0.0.6
   flutter_local_notifications: ^21.0.0
   flutter_riverpod: ^3.3.1
   image_picker: ^1.2.1
