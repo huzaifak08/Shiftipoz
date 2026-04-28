@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 
-import 'package:shiftipoz/views/home_view.dart';
+import 'package:shiftipoz/views/main_navigation_wrapper.dart';
 
 class SplashView extends StatefulWidget {
   const SplashView({super.key});
@@ -55,7 +55,7 @@ class _SplashViewState extends State<SplashView>
     Timer(const Duration(seconds: 3), () {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const HomeView()),
+        MaterialPageRoute(builder: (context) => const MainNavigationWrapper()),
       );
     });
   }
