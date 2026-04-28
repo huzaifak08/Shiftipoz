@@ -8,9 +8,11 @@ import 'package:shiftipoz/components/custom_button.dart';
 import 'package:shiftipoz/helpers/app_data.dart';
 import 'package:shiftipoz/models/user_model.dart';
 import 'package:shiftipoz/providers/auth_provider/auth_provider.dart';
+import 'package:shiftipoz/providers/navigation_provider/navigation_provider.dart';
+import 'package:shiftipoz/providers/product_provider/product_provider.dart';
 import 'package:shiftipoz/providers/user_provider/user_provider.dart';
+import 'package:shiftipoz/views/auth/sign_in_view.dart';
 import 'package:shiftipoz/views/auth/verify_email_view.dart';
-import 'package:shiftipoz/views/home_view.dart';
 
 class ProfileView extends ConsumerStatefulWidget {
   const ProfileView({super.key});
@@ -73,7 +75,15 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
         error: (err, stack) => Center(child: Text("Error: $err")),
         data: (user) {
           if (user == null) {
-            return const Center(child: Text("No user data found"));
+            return SessionExpiredView(
+              onLoginPressed: () {
+                // Navigate to your Auth/Login screen
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => SignInView()),
+                );
+              },
+            );
           }
 
           _nameController.text = user.name;
@@ -347,29 +357,25 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
           ),
           ElevatedButton(
             onPressed: () async {
-              // 1. Clear the Singleton
+              // 1. Close dialog
+              Navigator.pop(context);
 
-              // 2. Clear Local SQLite Cache (Crucial for security)
+              // 2. Clear Singleton/Navigation UI state
+              ref.read(navigationIndexProvider.notifier).update((state) => 0);
+
+              // 3. Clear Local SQLite Cache (User data)
               await UserTable.clearAllUsers();
-              // await LedgerTable.deleteAllLedgers();
 
-              // 3. Invalidate Providers (This resets their state to default/loading)
-              // Todo: This will trigger the build() methods to run again and see 'null' user
+              // 4. Invalidate providers IMMEDIATELY
+              // This forces them into a loading/null state so they don't try to sync
+              ref.invalidate(productProvider);
               ref.invalidate(userProvider);
-              // ref.invalidate(projectNotifierProvider);
-              // ref.invalidate(ledgerNotifierProvider);
 
-              // 4. Perform Firebase Logout
+              // 5. Perform Logout (This will update authControllerProvider state)
               await ref.read(authControllerProvider.notifier).logout();
 
-              // 5. Navigate to Sign In
-              if (context.mounted) {
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (context) => const HomeView()),
-                  (route) => false,
-                );
-              }
+              // 6. Final reset to ensure everything is fresh
+              ref.invalidate(authControllerProvider);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.primary,
@@ -377,6 +383,106 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
             child: Text("Logout", style: TextStyle(color: Colors.black)),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class SessionExpiredView extends StatelessWidget {
+  final VoidCallback onLoginPressed;
+
+  const SessionExpiredView({super.key, required this.onLoginPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 40),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // 1. ICON HOLDER (The "Locked" Vibe)
+              Container(
+                padding: const EdgeInsets.all(30),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.05),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                    width: 2,
+                  ),
+                ),
+                child: Icon(
+                  Icons.lock_person_rounded,
+                  size: 60,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: 40),
+
+              // 2. TEXT CONTENT
+              Text(
+                "SESSION EXPIRED",
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 2,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                "To keep your books and conversions safe, please sign back into your Shiftipoz account.",
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.hintColor,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 40),
+
+              // 3. ACTION BUTTON
+              SizedBox(
+                width: double.infinity,
+                height: 55,
+                child: ElevatedButton(
+                  onPressed: onLoginPressed,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: theme.colorScheme.onPrimary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    "LOG IN AGAIN",
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ),
+              ),
+
+              // 4. SUBTLE LOGO FOOTER
+              const SizedBox(height: 60),
+              Opacity(
+                opacity: 0.2,
+                child: Text(
+                  "SHIFTIPOZ SECURITY",
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    letterSpacing: 4,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

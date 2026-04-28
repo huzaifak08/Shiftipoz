@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shiftipoz/components/custom_button.dart';
 import 'package:shiftipoz/components/custom_text_field.dart';
-import 'package:shiftipoz/providers/auth_provider/auth_provider.dart'; // Adjust path
-import 'package:shiftipoz/services/auth_service.dart'; // For AuthResult enum
-import 'package:shiftipoz/views/auth/sign_up_view.dart'; // For navigation
+import 'package:shiftipoz/providers/auth_provider/auth_provider.dart';
+import 'package:shiftipoz/services/auth_service.dart';
+import 'package:shiftipoz/views/auth/sign_up_view.dart';
 import 'package:shiftipoz/views/auth/verify_email_view.dart';
-import 'package:shiftipoz/views/home_view.dart'; // Your existing view
+import 'package:shiftipoz/views/main_navigation_wrapper.dart';
 
 class SignInView extends ConsumerStatefulWidget {
   const SignInView({super.key});
@@ -60,7 +60,7 @@ class _SignInViewState extends ConsumerState<SignInView> {
     } else {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (context) => HomeView()),
+        MaterialPageRoute(builder: (context) => MainNavigationWrapper()),
         (route) => false,
       );
     }

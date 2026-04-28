@@ -15,12 +15,21 @@ class UserNotifier extends _$UserNotifier {
 
   @override
   FutureOr<UserModel?> build() async {
-    // 1. Listen to Auth State - Rebuilds whenever login/logout happens
-    final authUser = ref.watch(authControllerProvider).value;
-    if (authUser == null) return null;
+    // watch the auth state
+    final authAsync = ref.watch(authControllerProvider);
 
-    // 2. Load Data using the robust Sync Logic
-    return await _initUser(authUser.uid);
+    return authAsync.when(
+      data: (user) {
+        if (user == null) {
+          // IMPORTANT: If auth is null, we MUST NOT try to load from cache
+          // otherwise we show old data while the app is transitioning.
+          return null;
+        }
+        return _initUser(user.uid);
+      },
+      error: (_, _) => null,
+      loading: () => null, // Stay null while auth is checking
+    );
   }
 
   /// Core logic: Cache first, then Cloud, then Sync

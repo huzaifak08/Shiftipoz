@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shiftipoz/providers/auth_provider/auth_provider.dart';
-import 'package:shiftipoz/views/home_view.dart';
+import 'package:shiftipoz/views/main_navigation_wrapper.dart';
 
 class VerifyEmailView extends ConsumerStatefulWidget {
   const VerifyEmailView({super.key});
@@ -55,7 +55,7 @@ class _VerifyEmailViewState extends ConsumerState<VerifyEmailView>
 
       if (user != null && user.emailVerified) {
         Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const HomeView()),
+          MaterialPageRoute(builder: (_) => const MainNavigationWrapper()),
           (route) => false,
         );
         return;
