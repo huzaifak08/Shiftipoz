@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:developer' as dev;
 import 'package:cloud_firestore/cloud_firestore.dart' hide GeoPoint;
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_geo_hash/flutter_geo_hash.dart';
 import 'package:shiftipoz/helpers/app_data.dart';
 import 'package:shiftipoz/helpers/constants.dart';
@@ -59,30 +60,46 @@ class ProductService {
   }
 
   /// --- Search Products by Title ---
-  /// Note: Firestore doesn't support 'contains'. We use 'searchTags' strategy.
+
   Future<List<ProductModel>> searchProductsByTitle({
     required String titleQuery,
     DocumentSnapshot? lastDoc,
   }) async {
     try {
-      final String term = titleQuery.toLowerCase().trim();
+      final List<String> terms = titleQuery
+          .toLowerCase()
+          .trim()
+          .split(' ')
+          .where((t) => t.isNotEmpty)
+          .toList();
+
+      if (terms.isEmpty) return [];
+
+      // Use the LAST word for the database query to allow partial matching as they type
+      // Example: "test bo" -> query Firestore for "bo"
+      final String activeTerm = terms.last;
 
       var query = _firestore
           .collection(productsCollection)
-          .where('searchTags', arrayContains: term)
+          .where('searchTags', arrayContains: activeTerm)
           .where('isAvailable', isEqualTo: true)
-          .limit(10);
+          .limit(20);
 
-      if (lastDoc != null) {
-        query = query.startAfterDocument(lastDoc);
-      }
+      if (lastDoc != null) query = query.startAfterDocument(lastDoc);
 
       final snapshot = await query.get();
-      return snapshot.docs
+
+      var results = snapshot.docs
           .map((doc) => ProductModel.fromMap(doc.data()))
+          .where((product) {
+            final tags = product.searchTags ?? [];
+            // Ensure the product matches ALL full words typed so far
+            return terms.every((term) => tags.contains(term));
+          })
           .toList();
+
+      return results;
     } catch (e) {
-      dev.log("ProductService: Error searching by title: $e");
       return [];
     }
   }
@@ -145,12 +162,17 @@ class ProductService {
 
       dev.log("Product Hash: $hash");
 
+      final searchTags = _generateSearchTags(product.title);
+
+      dev.log("Seach Tags: $searchTags");
+
       // 4. Create the 'Final' immutable model for Firestore
       final finalProduct = product.copyWith(
         id: productId,
         images: imageUrls,
         createdAt: DateTime.now(),
         locationData: product.locationData.copyWith(geohash: hash),
+        searchTags: searchTags,
         isSynced: true,
       );
 
@@ -171,5 +193,26 @@ class ProductService {
       return ProductModel.fromMap(doc.data()!);
     }
     return null;
+  }
+
+  List<String> _generateSearchTags(String title) {
+    final List<String> tags = [];
+    final List<String> words = title
+        .toLowerCase()
+        .trim()
+        .split(' ')
+        .where((w) => w.isNotEmpty)
+        .toList();
+
+    for (var word in words) {
+      String cumulative = '';
+      for (var char in word.characters) {
+        cumulative += char;
+        if (!tags.contains(cumulative)) {
+          tags.add(cumulative);
+        }
+      }
+    }
+    return tags;
   }
 }

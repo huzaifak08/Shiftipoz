@@ -49,6 +49,12 @@ class ShiftipozTheme {
         RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     ),
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
+      backgroundColor: royalBlue,
+      foregroundColor: Colors.white,
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+    ),
   );
 
   // --- DARK THEME (The Signature Shiftipoz) ---
@@ -95,6 +101,13 @@ class ShiftipozTheme {
       hourMinuteTextColor: liquidChrome,
       dayPeriodColor: midnightBlue,
       dayPeriodTextColor: liquidChrome,
+    ),
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
+      backgroundColor: const Color(0xFF5BC0BE), // Oxygen Cyan
+      foregroundColor: midnightBlue,
+      elevation: 8,
+      hoverElevation: 12,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
     ),
   );
 }

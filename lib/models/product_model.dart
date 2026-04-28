@@ -22,6 +22,7 @@ class ProductModel {
   final String title;
   final String description;
   final List<String> images;
+  final List<String>? searchTags;
   final CategoryType categoryType;
   final TransactionType transactionType;
   final PriceDetails priceDetails;
@@ -40,6 +41,7 @@ class ProductModel {
     required this.title,
     required this.description,
     required this.images,
+    this.searchTags,
     required this.categoryType,
     required this.transactionType,
     required this.priceDetails,
@@ -57,6 +59,7 @@ class ProductModel {
     String? title,
     String? description,
     List<String>? images,
+    List<String>? searchTags,
     CategoryType? categoryType,
     TransactionType? transactionType,
     PriceDetails? priceDetails,
@@ -73,6 +76,7 @@ class ProductModel {
       title: title ?? this.title,
       description: description ?? this.description,
       images: images ?? this.images,
+      searchTags: searchTags ?? this.searchTags,
       categoryType: categoryType ?? this.categoryType,
       transactionType: transactionType ?? this.transactionType,
       priceDetails: priceDetails ?? this.priceDetails,
@@ -93,6 +97,7 @@ class ProductModel {
       'title': title,
       'description': description,
       'images': images,
+      'searchTags': searchTags,
       'categoryType': categoryType.toMap(), // Saves as String
       'transactionType': transactionType.toMap(), // Saves as String
       'priceDetails': priceDetails.toMap(),
@@ -110,6 +115,7 @@ class ProductModel {
       title: map['title'] ?? '',
       description: map['description'] ?? '',
       images: List<String>.from(map['images'] ?? []),
+      searchTags: List<String>.from(map['searchTags'] ?? []),
       categoryType: CategoryTypeX.fromMap(map['categoryType'] ?? 'books'),
       transactionType: TransactionTypeX.fromMap(
         map['transactionType'] ?? 'giveaway',

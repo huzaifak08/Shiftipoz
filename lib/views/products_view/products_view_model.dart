@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/legacy.dart'
     show StateNotifier, StateNotifierProvider;
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:shiftipoz/providers/product_provider/product_provider.dart';
 
 class ProductsUiState {
   final bool isSearching;
@@ -32,7 +36,10 @@ class ProductsUiState {
 }
 
 class ProductsUiNotifier extends StateNotifier<ProductsUiState> {
-  ProductsUiNotifier() : super(ProductsUiState());
+  ProductsUiNotifier(this.ref) : super(ProductsUiState());
+
+  final Ref ref;
+  Timer? _debounce;
 
   // Controllers for the View to use
   final TextEditingController searchController = TextEditingController();
@@ -44,7 +51,14 @@ class ProductsUiNotifier extends StateNotifier<ProductsUiState> {
   }
 
   void updateSearch(String q) {
-    state = state.copyWith(searchQuery: q);
+    state = state.copyWith(searchQuery: q, isSearching: q.isNotEmpty);
+
+    // Debounce: Wait 500ms after the user stops typing before searching
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      // Call the product provider to refresh with the query
+      ref.read(productProvider.notifier).fetchInitialProducts(query: q);
+    });
   }
 
   void setLoadingMore(bool loading) {
@@ -73,5 +87,5 @@ class ProductsUiNotifier extends StateNotifier<ProductsUiState> {
 
 final productsUiProvider =
     StateNotifierProvider<ProductsUiNotifier, ProductsUiState>(
-      (ref) => ProductsUiNotifier(),
+      (ref) => ProductsUiNotifier(ref),
     );

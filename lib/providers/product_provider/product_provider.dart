@@ -25,50 +25,71 @@ class ProductNotifier extends _$ProductNotifier {
 
   // Inside ProductNotifier
   Future<List<ProductModel>> fetchInitialProducts({String? query}) async {
+    // 1. Reset pagination states
     _shownIds.clear();
     _lastDocument = null;
     _currentPrecision = 6;
 
-    // Get actual hash from your location service
-    final String userHash = "u36";
-    List<ProductModel> results = [];
+    // Show loading for fresh start
+    state = const AsyncValue.loading();
 
-    if (query != null && query.isNotEmpty) {
-      results = await _productService.searchProductsByTitle(titleQuery: query);
-    } else {
-      // --- THE EXPANSION LOOP ---
-      while (results.length < 10) {
-        final newBatch = await _productService.fetchProductsByLocation(
-          userGeohash: userHash,
-          precision: _currentPrecision,
-          lastDoc: _lastDocument,
-          isGlobal: _currentPrecision == 0, // New flag for global search
+    try {
+      List<ProductModel> results = [];
+
+      // Check if we are searching or discovering
+      final isQueryEmpty = query == null || query.trim().isEmpty;
+
+      if (!isQueryEmpty) {
+        // 🔍 SEARCH MODE
+        dev.log("🔎 Searching for: $query");
+        results = await _productService.searchProductsByTitle(
+          titleQuery: query,
         );
+      } else {
+        // 🌍 DISCOVERY MODE (Your existing expansion loop)
+        results = await _fetchDiscoveryBatch();
+      }
 
-        for (var item in newBatch) {
-          if (!_shownIds.contains(item.id)) {
-            results.add(item);
-            _shownIds.add(item.id);
-          }
-        }
+      // Track IDs to prevent duplicates during "Load More"
+      for (var item in results) {
+        _shownIds.add(item.id);
+      }
 
-        if (results.length < 10) {
-          if (_currentPrecision > 2) {
-            _currentPrecision -= 2;
-            _lastDocument = null;
-          } else if (_currentPrecision == 2) {
-            // 🌍 FINAL FRONTIER: If we still don't have 10, go Global
-            _currentPrecision = 0;
-            _lastDocument = null;
-          } else {
-            break; // Already at global level
-          }
+      state = AsyncValue.data(results);
+      return results;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      return [];
+    }
+  }
+
+  // Refactor the expansion loop into a helper for cleaner code
+  Future<List<ProductModel>> _fetchDiscoveryBatch() async {
+    List<ProductModel> results = [];
+    const String userHash = "u36";
+
+    while (results.length < 10) {
+      final newBatch = await _productService.fetchProductsByLocation(
+        userGeohash: userHash,
+        precision: _currentPrecision,
+        lastDoc: _lastDocument,
+        isGlobal: _currentPrecision == 0,
+      );
+
+      results.addAll(newBatch);
+
+      if (results.length < 10) {
+        if (_currentPrecision > 2) {
+          _currentPrecision -= 2;
+        } else if (_currentPrecision == 2) {
+          _currentPrecision = 0;
         } else {
-          break;
+          break; // Max horizon reached
         }
+      } else {
+        break;
       }
     }
-    state = AsyncValue.data(results);
     return results;
   }
 

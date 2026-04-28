@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shiftipoz/helpers/constants.dart';
-import 'package:shiftipoz/models/product_model.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:shiftipoz/components/custom_loader.dart';
+import 'package:shiftipoz/components/product_card.dart';
 import 'package:shiftipoz/providers/product_provider/product_provider.dart';
 import 'package:shiftipoz/views/add_update_product_view/add_update_product_view.dart';
 import 'package:shiftipoz/views/products_view/products_view_model.dart';
@@ -17,12 +18,11 @@ class _ProductsViewState extends ConsumerState<ProductsView> {
   @override
   void initState() {
     super.initState();
-    // Attach scroll listener to the controller in UI Provider
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final uiNotifier = ref.read(productsUiProvider.notifier);
       uiNotifier.scrollController.addListener(() {
         if (uiNotifier.scrollController.position.pixels >=
-            uiNotifier.scrollController.position.maxScrollExtent - 300) {
+            uiNotifier.scrollController.position.maxScrollExtent - 400) {
           _loadMore();
         }
       });
@@ -48,246 +48,306 @@ class _ProductsViewState extends ConsumerState<ProductsView> {
     final productsAsync = ref.watch(productProvider);
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      body: RefreshIndicator(
-        onRefresh: () =>
-            ref.read(productProvider.notifier).fetchInitialProducts(),
-        child: CustomScrollView(
-          controller: uiNotifier.scrollController,
-          slivers: [
-            // --- PREMIUM STICKY SEARCH BAR ---
-            _buildSliverAppBar(uiState, uiNotifier, theme),
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: () =>
+              ref.read(productProvider.notifier).fetchInitialProducts(),
+          child: CustomScrollView(
+            controller: uiNotifier.scrollController,
+            slivers: [
+              // 1. BRANDING HEADER
+              SliverToBoxAdapter(child: _buildBrandingHeader(theme)),
 
-            // --- HORIZON CONTEXT BAR ---
-            _buildHorizonHeader(uiState, theme),
+              // 2. SEARCH BAR (Sticky-ready)
+              SliverToBoxAdapter(
+                child: _buildSearchBar(uiState, uiNotifier, theme),
+              ),
 
-            // --- PRODUCT GRID ---
-            productsAsync.when(
-              data: (products) => products.isEmpty
-                  ? const SliverFillRemaining(
-                      child: Center(
-                        child: Text("Nothing found in this horizon."),
-                      ),
-                    )
-                  : SliverPadding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      sliver: SliverGrid(
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              mainAxisSpacing: 16,
-                              crossAxisSpacing: 16,
-                              childAspectRatio: 0.72,
-                            ),
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) =>
-                              _ProductCard(product: products[index]),
-                          childCount: products.length,
-                        ),
+              // 3. CATEGORY SELECTOR (UI ONLY)
+              SliverToBoxAdapter(child: _buildCategorySection(theme)),
+
+              // 4. MAIN CONTENT AREA
+              productsAsync.when(
+                data: (products) {
+                  // Check if the search bar actually has text
+                  final bool isSearchActive = uiState.searchQuery
+                      .trim()
+                      .isNotEmpty;
+
+                  // SCENARIO A: Search found nothing
+                  if (isSearchActive && products.isEmpty) {
+                    return const SliverFillRemaining(
+                      child: _NoResultsFoundView(),
+                    );
+                  }
+
+                  // SCENARIO B: Home screen is empty (No products in the world yet)
+                  if (!isSearchActive && products.isEmpty) {
+                    return const SliverFillRemaining(child: _EmptyStateView());
+                  }
+
+                  // SCENARIO C: Success (Show the grid)
+                  return SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    sliver: SliverGrid(
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 16,
+                            crossAxisSpacing: 16,
+                            childAspectRatio: 0.72,
+                          ),
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) =>
+                            ProductCard(product: products[index]),
+                        childCount: products.length,
                       ),
                     ),
-              loading: () => const SliverFillRemaining(
-                child: Center(child: CircularProgressIndicator()),
-              ),
-              error: (e, _) =>
-                  SliverFillRemaining(child: Center(child: Text("Error: $e"))),
-            ),
-
-            // --- PAGINATION LOADER ---
-            if (uiState.isLoadingMore)
-              const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Center(
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
+                  );
+                },
+                loading: () => const SliverFillRemaining(child: CustomLoader()),
+                error: (e, _) => SliverFillRemaining(
+                  child: _ErrorStateView(error: e.toString()),
                 ),
               ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 100)),
+              // 5. PAGINATION SPINNER
+              if (uiState.isLoadingMore)
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 30),
+                    child: Center(child: CustomLoader(size: 120)),
+                  ),
+                ),
+
+              const SliverToBoxAdapter(child: SizedBox(height: 100)),
+            ],
+          ),
+        ),
+      ),
+      floatingActionButton: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Theme.of(context).colorScheme.secondary.withOpacity(0.3),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
+            ),
           ],
+        ),
+        child: FloatingActionButton.extended(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const AddUpdateProductView(),
+              ),
+            );
+          },
+          // Using a more "Marketplace" friendly icon
+          icon: const Icon(Icons.add_rounded, size: 28),
+          label: const Text(
+            "LIST ITEM",
+            style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1),
+          ),
+          // This uses the theme colors we defined above automatically
         ),
       ),
     );
   }
 
-  Widget _buildSliverAppBar(
+  Widget _buildBrandingHeader(ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+      child: Row(
+        children: [
+          SvgPicture.asset('assets/images/logo.svg', height: 40),
+          const SizedBox(width: 12),
+          Text(
+            "SHIFTIPOZ",
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w900,
+              letterSpacing: 2,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          const Spacer(),
+          IconButton(
+            onPressed: () {}, // Notification/Profile placeholder
+            icon: Icon(
+              Icons.notifications_none_rounded,
+              color: theme.hintColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBar(
     ProductsUiState uiState,
     ProductsUiNotifier uiNotifier,
     ThemeData theme,
   ) {
-    return SliverAppBar(
-      floating: true,
-      pinned: true,
-      elevation: 0,
-      backgroundColor: theme.scaffoldBackgroundColor,
-      title: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 200),
-        child: uiState.isSearching
-            ? TextField(
-                key: const ValueKey('searchField'),
-                controller: uiNotifier.searchController,
-                autofocus: true,
-                onChanged: uiNotifier.updateSearch,
-                decoration: const InputDecoration(
-                  hintText: "Search title...",
-                  border: InputBorder.none,
-                ),
-              )
-            : const Text(
-                "Shiftipoz",
-                style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1),
-              ),
-      ),
-      actions: [
-        IconButton(
-          onPressed: uiNotifier.toggleSearch,
-          icon: Icon(uiState.isSearching ? Icons.close : Icons.search),
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Container(
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: theme.colorScheme.outline.withOpacity(0.1)),
         ),
-        IconButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => AddUpdateProductView()),
-            );
-          },
-          icon: Icon(Icons.add),
+        child: TextField(
+          controller: uiNotifier.searchController,
+          onChanged: uiNotifier.updateSearch,
+          decoration: InputDecoration(
+            hintText: "Search books nearby...",
+            prefixIcon: Icon(Icons.search, color: theme.colorScheme.primary),
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(vertical: 15),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategorySection(ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              "Categories",
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                _CategoryChip(
+                  label: "Books",
+                  icon: Icons.menu_book_rounded,
+                  isSelected: true,
+                  theme: theme,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool isSelected;
+  final ThemeData theme;
+
+  const _CategoryChip({
+    required this.label,
+    required this.icon,
+    required this.isSelected,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(right: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: isSelected
+            ? theme.colorScheme.primary
+            : theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(
+          color: isSelected
+              ? Colors.transparent
+              : theme.colorScheme.outline.withOpacity(0.2),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 18,
+            color: isSelected ? Colors.white : theme.hintColor,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? Colors.white : theme.hintColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyStateView extends StatelessWidget {
+  const _EmptyStateView();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.auto_stories_outlined,
+          size: 80,
+          color: Colors.grey.withOpacity(0.3),
+        ),
+        const SizedBox(height: 20),
+        const Text(
+          "The horizon is clear!",
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          "No books found near you yet. Try expanding the horizon.",
+          textAlign: TextAlign.center,
         ),
       ],
     );
   }
-
-  Widget _buildHorizonHeader(ProductsUiState uiState, ThemeData theme) {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.explore_outlined,
-                    size: 14,
-                    color: theme.colorScheme.primary,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    "Horizon: Level ${uiState.currentHorizonLevel}",
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
-class _ProductCard extends StatelessWidget {
-  final ProductModel product;
-  const _ProductCard({required this.product});
+class _ErrorStateView extends StatelessWidget {
+  final String error;
+  const _ErrorStateView({required this.error});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
+    return Padding(
+      padding: const EdgeInsets.all(40.0),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // 1. Image Holder
-          Expanded(
-            child: Stack(
-              children: [
-                Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(24),
-                    image: DecorationImage(
-                      image: NetworkImage(
-                        product.images.isNotEmpty
-                            ? product.images[0]
-                            : 'https://via.placeholder.com/150',
-                      ),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-                // Transaction Badge
-                Positioned(
-                  top: 10,
-                  left: 10,
-                  child: _TypeBadge(type: product.transactionType),
-                ),
-              ],
-            ),
+          const Icon(Icons.error_outline, size: 50, color: Colors.redAccent),
+          const SizedBox(height: 20),
+          Text(
+            "Something went wrong",
+            style: Theme.of(context).textTheme.titleMedium,
           ),
-
-          // 2. Details
-          Padding(
-            padding: const EdgeInsets.all(14.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  product.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  product.priceDetails.isFree
-                      ? "GIVEAWAY"
-                      : "${product.priceDetails.value} / ${product.priceDetails.period ?? 'once'}",
-                  style: TextStyle(
-                    color: theme.colorScheme.primary,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Icon(Icons.location_pin, size: 12, color: theme.hintColor),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        product.locationData.cityName,
-                        style: TextStyle(color: theme.hintColor, fontSize: 11),
-                        maxLines: 1,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+          const SizedBox(height: 8),
+          Text(
+            error,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.grey),
           ),
         ],
       ),
@@ -295,42 +355,33 @@ class _ProductCard extends StatelessWidget {
   }
 }
 
-class _TypeBadge extends StatelessWidget {
-  final TransactionType type;
-  const _TypeBadge({required this.type});
+class _NoResultsFoundView extends StatelessWidget {
+  const _NoResultsFoundView();
 
   @override
   Widget build(BuildContext context) {
-    Color color;
-    switch (type) {
-      case TransactionType.giveaway:
-        color = Colors.green;
-        break;
-      case TransactionType.rent:
-        color = Colors.orange;
-        break;
-      case TransactionType.sell:
-        color = Colors.redAccent;
-        break;
-      case TransactionType.borrow:
-        color = Colors.blue;
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.9),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: color.withOpacity(0.3), blurRadius: 8)],
-      ),
-      child: Text(
-        type.name.toUpperCase(),
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 9,
-          fontWeight: FontWeight.bold,
-        ),
+    return Padding(
+      padding: const EdgeInsets.all(40.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.search_off_rounded,
+            size: 80,
+            color: Colors.grey.withOpacity(0.3),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            "No Matches Found",
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            "We couldn't find any books matching that title. Check your spelling or try a different keyword.",
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey),
+          ),
+        ],
       ),
     );
   }
