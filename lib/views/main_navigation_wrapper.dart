@@ -47,16 +47,18 @@ class _BeautifulBottomBar extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(20, 0, 20, 25), // Floating effect
       padding: const EdgeInsets.only(top: 12, bottom: 30, left: 10, right: 10),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface.withOpacity(0.95),
+        color: theme.colorScheme.surface.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
         ],
-        border: Border.all(color: theme.colorScheme.outline.withOpacity(0.1)),
+        border: Border.all(
+          color: theme.colorScheme.outline.withValues(alpha: 0.1),
+        ),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -120,7 +122,7 @@ class _NavBarItem extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
-              ? theme.colorScheme.primary.withOpacity(0.1)
+              ? theme.colorScheme.primary.withValues(alpha: 0.1)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
         ),
@@ -131,7 +133,7 @@ class _NavBarItem extends StatelessWidget {
               icon,
               color: isSelected
                   ? theme.colorScheme.primary
-                  : theme.hintColor.withOpacity(0.5),
+                  : theme.hintColor.withValues(alpha: 0.5),
               size: 24,
             ),
             if (isSelected) ...[
@@ -167,7 +169,7 @@ class _PlaceholderView extends StatelessWidget {
             Icon(
               Icons.hourglass_empty_rounded,
               size: 60,
-              color: Theme.of(context).hintColor.withOpacity(0.2),
+              color: Theme.of(context).hintColor.withValues(alpha: 0.2),
             ),
             const SizedBox(height: 20),
             Text(

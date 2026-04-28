@@ -56,7 +56,7 @@ class _AvatarPickerState extends State<AvatarPicker> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: primaryColor.withOpacity(0.2),
+                  color: primaryColor.withValues(alpha: 0.2),
                   width: 4,
                 ),
               ),
@@ -69,11 +69,11 @@ class _AvatarPickerState extends State<AvatarPicker> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: theme.brightness == Brightness.dark
-                    ? Colors.white.withOpacity(0.05)
+                    ? Colors.white.withValues(alpha: 0.05)
                     : Colors.white,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 10,
                     spreadRadius: 2,
                   ),

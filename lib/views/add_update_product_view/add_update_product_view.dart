@@ -217,10 +217,10 @@ class _AddProductViewState extends ConsumerState<AddUpdateProductView> {
                 width: 120,
                 margin: const EdgeInsets.only(right: 12),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withOpacity(0.05),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: theme.colorScheme.primary.withOpacity(0.2),
+                    color: theme.colorScheme.primary.withValues(alpha: 0.2),
                     width: 2,
                   ),
                 ),
@@ -281,7 +281,7 @@ class _AddProductViewState extends ConsumerState<AddUpdateProductView> {
               border: Border.all(
                 color: isSelected
                     ? theme.colorScheme.primary
-                    : theme.colorScheme.outline.withOpacity(0.5),
+                    : theme.colorScheme.outline.withValues(alpha: 0.5),
               ),
             ),
             child: Text(
@@ -345,7 +345,9 @@ class _AddProductViewState extends ConsumerState<AddUpdateProductView> {
           hintText: hint,
           prefixIcon: Icon(icon, size: 20),
           filled: true,
-          fillColor: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+          fillColor: theme.colorScheme.surfaceContainerHighest.withValues(
+            alpha: 0.3,
+          ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),
             borderSide: BorderSide.none,

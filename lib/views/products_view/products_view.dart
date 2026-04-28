@@ -130,7 +130,9 @@ class _ProductsViewState extends ConsumerState<ProductsView> {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Theme.of(context).colorScheme.secondary.withOpacity(0.3),
+              color: Theme.of(
+                context,
+              ).colorScheme.secondary.withValues(alpha: 0.3),
               blurRadius: 15,
               offset: const Offset(0, 8),
             ),
@@ -194,9 +196,13 @@ class _ProductsViewState extends ConsumerState<ProductsView> {
       padding: const EdgeInsets.all(20),
       child: Container(
         decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+          color: theme.colorScheme.surfaceContainerHighest.withValues(
+            alpha: 0.3,
+          ),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: theme.colorScheme.outline.withOpacity(0.1)),
+          border: Border.all(
+            color: theme.colorScheme.outline.withValues(alpha: 0.1),
+          ),
         ),
         child: TextField(
           controller: uiNotifier.searchController,
@@ -274,7 +280,7 @@ class _CategoryChip extends StatelessWidget {
         border: Border.all(
           color: isSelected
               ? Colors.transparent
-              : theme.colorScheme.outline.withOpacity(0.2),
+              : theme.colorScheme.outline.withValues(alpha: 0.2),
         ),
       ),
       child: Row(
@@ -309,7 +315,7 @@ class _EmptyStateView extends StatelessWidget {
         Icon(
           Icons.auto_stories_outlined,
           size: 80,
-          color: Colors.grey.withOpacity(0.3),
+          color: Colors.grey.withValues(alpha: 0.3),
         ),
         const SizedBox(height: 20),
         const Text(
@@ -368,7 +374,7 @@ class _NoResultsFoundView extends StatelessWidget {
           Icon(
             Icons.search_off_rounded,
             size: 80,
-            color: Colors.grey.withOpacity(0.3),
+            color: Colors.grey.withValues(alpha: 0.3),
           ),
           const SizedBox(height: 20),
           const Text(

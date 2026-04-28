@@ -86,14 +86,16 @@ class _HomeViewState extends ConsumerState<HomeView> {
   // ---------------- BI-DIRECTIONAL LOGIC ----------------
 
   void _onFromChanged() {
-    if (!_fromFocusNode.hasFocus)
+    if (!_fromFocusNode.hasFocus) {
       return; // Only process if the user is typing here
+    }
     _performCalculation(isForward: true);
   }
 
   void _onToChanged() {
-    if (!_toFocusNode.hasFocus)
+    if (!_toFocusNode.hasFocus) {
       return; // Only process if the user is typing here
+    }
     _performCalculation(isForward: false);
   }
 
@@ -188,10 +190,11 @@ class _HomeViewState extends ConsumerState<HomeView> {
             ),
             onTap: () {
               setState(() {
-                if (isFrom)
+                if (isFrom) {
                   _fromUnit = units[index];
-                else
+                } else {
                   _toUnit = units[index];
+                }
                 _performCalculation(isForward: true);
               });
               Navigator.pop(context);
@@ -283,12 +286,12 @@ class _HomeViewState extends ConsumerState<HomeView> {
             duration: const Duration(milliseconds: 300),
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(isActive ? 0.08 : 0.04),
+              color: Colors.white.withValues(alpha: isActive ? 0.08 : 0.04),
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
                 color: isActive
-                    ? const Color(0xFFC0C0C0).withOpacity(0.5)
-                    : Colors.white.withOpacity(0.05),
+                    ? const Color(0xFFC0C0C0).withValues(alpha: 0.5)
+                    : Colors.white.withValues(alpha: 0.05),
                 width: isActive ? 1.5 : 1,
               ),
             ),
@@ -395,7 +398,7 @@ class _HomeViewState extends ConsumerState<HomeView> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               decoration: BoxDecoration(
                 color: isActive
-                    ? const Color(0xFFC0C0C0).withOpacity(0.1)
+                    ? const Color(0xFFC0C0C0).withValues(alpha: 0.1)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(15),
                 border: Border.all(
