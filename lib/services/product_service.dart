@@ -289,38 +289,34 @@ class ProductService {
   Future<void> deleteProduct(String productId, List<String> imageUrls) async {
     try {
       dev.log(
-        "🗑️ Starting deletion for product: $productId",
+        "🗑️ Deleting product and images: $productId",
         name: "ProductService",
       );
 
-      // 1. Delete Images from Firebase Storage
+      // 1. Delete all images in parallel for better performance
       if (imageUrls.isNotEmpty) {
-        for (String url in imageUrls) {
-          try {
-            // Get reference from URL to delete the specific file
-            final ref = _storage.refFromURL(url);
-            await ref.delete();
-            dev.log("✅ Image deleted from storage", name: "ProductService");
-          } catch (e) {
-            // We catch this specifically because if the image is already
-            // missing, we still want to proceed with deleting the document.
-            dev.log(
-              "⚠️ Failed to delete image or image not found: $e",
-              name: "ProductService",
-            );
-          }
-        }
+        await Future.wait(
+          imageUrls.map((url) async {
+            try {
+              final ref = _storage.refFromURL(url);
+              await ref.delete();
+            } catch (e) {
+              // Log but continue—we don't want a missing image to block document deletion
+              dev.log(
+                "⚠️ Storage deletion skipped/failed: $e",
+                name: "ProductService",
+              );
+            }
+          }),
+        );
       }
 
-      // 2. Delete Document from Firestore
+      // 2. Delete the Firestore Document
       await _firestore.collection(productsCollection).doc(productId).delete();
 
-      dev.log(
-        "✅ Product document deleted successfully: $productId",
-        name: "ProductService",
-      );
+      dev.log("✅ Deletion complete.", name: "ProductService");
     } catch (e) {
-      dev.log("❌ Error during product deletion: $e", name: "ProductService");
+      dev.log("❌ Fatal error during deletion: $e", name: "ProductService");
       rethrow;
     }
   }

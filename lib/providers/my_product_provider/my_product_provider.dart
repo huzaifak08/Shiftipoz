@@ -101,25 +101,41 @@ class MyProductsNotifier extends _$MyProductsNotifier {
     }
   }
 
-  // Inside MyProductsNotifier
+  /// --- Delete Product ---
   Future<void> removeProduct(ProductModel product) async {
+    // Store the current state in case we need to roll back
+    final previousState = state;
+
     try {
-      // Show a loading indicator if necessary, or just perform the action
+      // 1. Optimistic UI Update: Remove it from the list immediately
+      if (state.hasValue) {
+        final updatedList = state.value!
+            .where((p) => p.id != product.id)
+            .toList();
+        state = AsyncValue.data(updatedList);
+      }
+
+      // 2. Perform the actual Cloud Deletion
       await _productService.deleteProduct(product.id, product.images);
 
-      // Update local state by filtering out the deleted item
-      final currentList = state.value ?? [];
-      state = AsyncValue.data(
-        currentList.where((p) => p.id != product.id).toList(),
-      );
-
-      // Refresh the main marketplace so the deleted item disappears there too
+      // 3. Invalidate the global Marketplace so the item disappears there too
       ref.invalidate(productProvider);
 
-      dev.log("Product removed from state and marketplace invalidated");
+      dev.log(
+        "✅ Provider: Product removed successfully.",
+        name: "MyProductsProvider",
+      );
     } catch (e) {
-      dev.log("Error in removeProduct provider: $e");
-      // Optionally set state to error to show a snackbar in the UI
+      dev.log(
+        "❌ Provider: Deletion failed, rolling back.",
+        name: "MyProductsProvider",
+      );
+
+      // 4. Rollback: If Cloud deletion fails, put the item back in the list
+      state = previousState;
+
+      // Rethrow to let the UI show a SnackBar error
+      rethrow;
     }
   }
 }

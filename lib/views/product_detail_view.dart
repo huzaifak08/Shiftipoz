@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shiftipoz/components/delete_dialog.dart';
+import 'package:shiftipoz/helpers/app_data.dart';
 import 'package:shiftipoz/models/product_model.dart';
 import 'package:shiftipoz/providers/auth_provider/auth_provider.dart';
 import 'package:shiftipoz/providers/my_product_provider/my_product_provider.dart';
@@ -260,7 +262,26 @@ class _ProductDetailViewState extends ConsumerState<ProductDetailView> {
                     icon: Icons.delete_outline_rounded,
                     color: Colors.redAccent.withValues(alpha: 0.1),
                     iconColor: Colors.redAccent,
-                    onTap: () => _handleDelete(context, ref),
+                    onTap: () => showDialog(
+                      context: context,
+                      builder: (context) => DeleteDialog(
+                        onPressed: () async {
+                          try {
+                            await ref
+                                .read(myProductsProvider.notifier)
+                                .removeProduct(product);
+                            if (context.mounted) Navigator.pop(context);
+                          } catch (e) {
+                            ScaffoldMessenger.of(
+                              AppData.shared.navigatorKey.currentContext ??
+                                  context,
+                            ).showSnackBar(
+                              SnackBar(content: Text("Failed to delete: $e")),
+                            );
+                          }
+                        },
+                      ),
+                    ),
                   ),
                 ],
               )
@@ -310,12 +331,6 @@ class _ProductDetailViewState extends ConsumerState<ProductDetailView> {
         ),
       ),
     );
-  }
-
-  void _handleDelete(BuildContext context, WidgetRef ref) {
-    // Call the removeProduct from MyProductsNotifier we created earlier
-    ref.read(myProductsProvider.notifier).removeProduct(widget.product);
-    Navigator.pop(context);
   }
 }
 

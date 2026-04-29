@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shiftipoz/components/custom_loader.dart';
+import 'package:shiftipoz/components/delete_dialog.dart';
 import 'package:shiftipoz/components/product_card.dart';
+import 'package:shiftipoz/helpers/app_data.dart';
 import 'package:shiftipoz/models/product_model.dart';
 import 'package:shiftipoz/providers/my_product_provider/my_product_provider.dart';
 
@@ -133,37 +135,29 @@ class _ManagementCard extends ConsumerWidget {
               label: "",
               color: Colors.redAccent.withValues(alpha: 0.1),
               textColor: Colors.redAccent,
-              onTap: () => _confirmDeletion(context, ref),
+              onTap: () => showDialog(
+                context: context,
+                builder: (context) => DeleteDialog(
+                  onPressed: () async {
+                    try {
+                      await ref
+                          .read(myProductsProvider.notifier)
+                          .removeProduct(product);
+                      if (context.mounted) Navigator.pop(context);
+                    } catch (e) {
+                      ScaffoldMessenger.of(
+                        AppData.shared.navigatorKey.currentContext ?? context,
+                      ).showSnackBar(
+                        SnackBar(content: Text("Failed to delete: $e")),
+                      );
+                    }
+                  },
+                ),
+              ),
             ),
           ],
         ),
       ],
-    );
-  }
-
-  void _confirmDeletion(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Delete Listing?"),
-        content: const Text(
-          "This action cannot be undone. The product and its images will be permanently removed.",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              ref.read(myProductsProvider.notifier).removeProduct(product);
-              Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-            child: const Text("Delete", style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
     );
   }
 }
