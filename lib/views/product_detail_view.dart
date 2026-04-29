@@ -104,7 +104,7 @@ class _ProductDetailViewState extends ConsumerState<ProductDetailView> {
             return GestureDetector(
               onTap: () => _openFullScreenPreview(context, index),
               child: Hero(
-                tag: widget.product.id,
+                tag: 'details_${DateTime.now().microsecondsSinceEpoch}',
                 child: Image.network(
                   widget.product.images[index],
                   fit: BoxFit.cover,

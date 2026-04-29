@@ -37,17 +37,20 @@ class ProductCard extends StatelessWidget {
             Expanded(
               child: Stack(
                 children: [
-                  Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(24),
-                      image: DecorationImage(
-                        image: NetworkImage(
-                          product.images.isNotEmpty
-                              ? product.images[0]
-                              : 'https://via.placeholder.com/150',
+                  Hero(
+                    tag: 'card_${DateTime.now().microsecondsSinceEpoch}',
+                    child: Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(24),
+                        image: DecorationImage(
+                          image: NetworkImage(
+                            product.images.isNotEmpty
+                                ? product.images[0]
+                                : 'https://via.placeholder.com/150',
+                          ),
+                          fit: BoxFit.cover,
                         ),
-                        fit: BoxFit.cover,
                       ),
                     ),
                   ),
