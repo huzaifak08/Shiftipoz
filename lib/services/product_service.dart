@@ -104,6 +104,96 @@ class ProductService {
     }
   }
 
+  /// Fetches products specifically uploaded by the current user
+  Future<List<ProductModel>> fetchMyProducts({
+    required String userId,
+    DocumentSnapshot? lastDoc,
+  }) async {
+    try {
+      dev.log(
+        "📦 Fetching own products for UID: $userId",
+        name: "ProductService",
+      );
+
+      var query = _firestore
+          .collection(productsCollection)
+          .where('ownerId', isEqualTo: userId)
+          .orderBy('createdAt', descending: true) // Show newest first
+          .limit(10);
+
+      if (lastDoc != null) {
+        query = query.startAfterDocument(lastDoc);
+      }
+
+      final snapshot = await query.get();
+
+      return snapshot.docs.map((doc) {
+        return ProductModel.fromMap(doc.data());
+      }).toList();
+    } catch (e) {
+      dev.log("Error fetching personal products: $e", name: "ProductService");
+      rethrow;
+    }
+  }
+
+  /// Updates an existing product, handles new image uploads and old image deletions
+  Future<void> updateProduct(ProductModel product, List<File> newImages) async {
+    try {
+      dev.log("🔄 Updating product: ${product.id}", name: "ProductService");
+
+      List<String> finalImageUrls = List.from(product.images);
+
+      // 1. Upload new images if any
+      if (newImages.isNotEmpty) {
+        for (File image in newImages) {
+          String fileName = DateTime.now().millisecondsSinceEpoch.toString();
+          Reference ref = _storage
+              .ref()
+              .child('products')
+              .child(product.id)
+              .child(fileName);
+
+          await ref.putFile(image);
+          String url = await ref.getDownloadURL();
+          finalImageUrls.add(url);
+        }
+      }
+
+      // 2. Prepare the data for Firestore
+      // We update the search tags as well in case the title changed
+      final List<String> tags = product.title.toLowerCase().split(' ');
+
+      final Map<String, dynamic> updateData = {
+        'title': product.title,
+        'description': product.description,
+        'images': finalImageUrls,
+        'searchTags': tags,
+        'categoryType': product.categoryType.name,
+        'transactionType': product.transactionType.name,
+        'priceDetails': {
+          'value': product.priceDetails.value,
+          'period': product.priceDetails.period,
+          'securityDeposit': product.priceDetails.securityDeposit,
+          'isFree': product.priceDetails.isFree,
+        },
+        'metadata': product.metadata,
+        'isAvailable': product.isAvailable,
+        // Note: We typically don't update ownerId or createdAt during an edit
+      };
+
+      // 3. Update Firestore document
+      await _firestore
+          .collection(productsCollection)
+          .doc(product.id)
+          .update(updateData);
+
+      dev.log("✅ Product updated successfully", name: "ProductService");
+    } catch (e) {
+      dev.log("❌ Error updating product: $e", name: "ProductService");
+      rethrow;
+    }
+  }
+
   /// --- 1. Multi-Image Upload ---
   /// Uploads a list of files and returns a list of download URLs
   Future<List<String>> uploadProductImages({
@@ -193,6 +283,46 @@ class ProductService {
       return ProductModel.fromMap(doc.data()!);
     }
     return null;
+  }
+
+  /// Deletes a product document and all its associated images from storage
+  Future<void> deleteProduct(String productId, List<String> imageUrls) async {
+    try {
+      dev.log(
+        "🗑️ Starting deletion for product: $productId",
+        name: "ProductService",
+      );
+
+      // 1. Delete Images from Firebase Storage
+      if (imageUrls.isNotEmpty) {
+        for (String url in imageUrls) {
+          try {
+            // Get reference from URL to delete the specific file
+            final ref = _storage.refFromURL(url);
+            await ref.delete();
+            dev.log("✅ Image deleted from storage", name: "ProductService");
+          } catch (e) {
+            // We catch this specifically because if the image is already
+            // missing, we still want to proceed with deleting the document.
+            dev.log(
+              "⚠️ Failed to delete image or image not found: $e",
+              name: "ProductService",
+            );
+          }
+        }
+      }
+
+      // 2. Delete Document from Firestore
+      await _firestore.collection(productsCollection).doc(productId).delete();
+
+      dev.log(
+        "✅ Product document deleted successfully: $productId",
+        name: "ProductService",
+      );
+    } catch (e) {
+      dev.log("❌ Error during product deletion: $e", name: "ProductService");
+      rethrow;
+    }
   }
 
   List<String> _generateSearchTags(String title) {

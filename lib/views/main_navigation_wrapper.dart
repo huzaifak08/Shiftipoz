@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shiftipoz/providers/navigation_provider/navigation_provider.dart';
 import 'package:shiftipoz/views/home_view.dart';
+import 'package:shiftipoz/views/my_product_view.dart';
 import 'package:shiftipoz/views/products_view/products_view.dart';
 import 'package:shiftipoz/views/profile_view.dart';
 
@@ -10,15 +11,15 @@ class MainNavigationWrapper extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // final theme = Theme.of(context);
     final selectedIndex = ref.watch(navigationIndexProvider);
 
-    // Our 4 main views
+    // Our 5 main views
     final List<Widget> pages = [
-      const HomeView(), // Option 1: Unit Conversion
-      const ProductsView(), // Option 2: Product View
-      const _PlaceholderView(title: "Chats"), // Option 3: Chats (Empty)
-      const ProfileView(), // Option 4: Profile
+      const HomeView(), // 0: Unit Conversion
+      const ProductsView(), // 1: Marketplace
+      const MyProductView(), // 2: User's Own Products (NEW)
+      const _PlaceholderView(title: "Chats"), // 3: Chats
+      const ProfileView(), // 4: Profile
     ];
 
     return Scaffold(
@@ -44,8 +45,8 @@ class _BeautifulBottomBar extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(20, 0, 20, 25), // Floating effect
-      padding: const EdgeInsets.only(top: 12, bottom: 30, left: 10, right: 10),
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 25),
+      padding: const EdgeInsets.only(top: 10, bottom: 25, left: 8, right: 8),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(30),
@@ -61,7 +62,8 @@ class _BeautifulBottomBar extends StatelessWidget {
         ),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        mainAxisAlignment:
+            MainAxisAlignment.spaceEvenly, // Use spaceEvenly for 5 items
         children: [
           _NavBarItem(
             icon: Icons.swap_horiz_rounded,
@@ -77,18 +79,26 @@ class _BeautifulBottomBar extends StatelessWidget {
             onTap: () => onTap(1),
             theme: theme,
           ),
+          // --- NEW TAB ---
           _NavBarItem(
-            icon: Icons.chat_bubble_outline_rounded,
-            label: "Chats",
+            icon: Icons.inventory_2_rounded,
+            label: "Inventory",
             isSelected: selectedIndex == 2,
             onTap: () => onTap(2),
             theme: theme,
           ),
           _NavBarItem(
-            icon: Icons.person_outline_rounded,
-            label: "Profile",
+            icon: Icons.chat_bubble_outline_rounded,
+            label: "Chats",
             isSelected: selectedIndex == 3,
             onTap: () => onTap(3),
+            theme: theme,
+          ),
+          _NavBarItem(
+            icon: Icons.person_outline_rounded,
+            label: "Profile",
+            isSelected: selectedIndex == 4,
+            onTap: () => onTap(4),
             theme: theme,
           ),
         ],
@@ -119,7 +129,7 @@ class _NavBarItem extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
               ? theme.colorScheme.primary.withValues(alpha: 0.1)

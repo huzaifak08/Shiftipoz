@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shiftipoz/helpers/constants.dart';
 import 'package:shiftipoz/models/product_model.dart';
+import 'package:shiftipoz/views/product_detail_view.dart';
 
 class ProductCard extends StatelessWidget {
   final ProductModel product;
@@ -10,93 +11,108 @@ class ProductCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ProductDetailView(product: product),
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 1. Image Holder
-          Expanded(
-            child: Stack(
-              children: [
-                Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(24),
-                    image: DecorationImage(
-                      image: NetworkImage(
-                        product.images.isNotEmpty
-                            ? product.images[0]
-                            : 'https://via.placeholder.com/150',
+      child: Container(
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 1. Image Holder
+            Expanded(
+              child: Stack(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(24),
+                      image: DecorationImage(
+                        image: NetworkImage(
+                          product.images.isNotEmpty
+                              ? product.images[0]
+                              : 'https://via.placeholder.com/150',
+                        ),
+                        fit: BoxFit.cover,
                       ),
-                      fit: BoxFit.cover,
                     ),
                   ),
-                ),
-                // Transaction Badge
-                Positioned(
-                  top: 10,
-                  left: 10,
-                  child: _TypeBadge(type: product.transactionType),
-                ),
-              ],
+                  // Transaction Badge
+                  Positioned(
+                    top: 10,
+                    left: 10,
+                    child: _TypeBadge(type: product.transactionType),
+                  ),
+                ],
+              ),
             ),
-          ),
 
-          // 2. Details
-          Padding(
-            padding: const EdgeInsets.all(14.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  product.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  product.priceDetails.isFree
-                      ? "GIVEAWAY"
-                      : "${product.priceDetails.value} / ${product.priceDetails.period ?? 'once'}",
-                  style: TextStyle(
-                    color: theme.colorScheme.primary,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Icon(Icons.location_pin, size: 12, color: theme.hintColor),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        product.locationData.cityName,
-                        style: TextStyle(color: theme.hintColor, fontSize: 11),
-                        maxLines: 1,
-                      ),
+            // 2. Details
+            Padding(
+              padding: const EdgeInsets.all(14.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    product.priceDetails.isFree
+                        ? "GIVEAWAY"
+                        : "${product.priceDetails.value} / ${product.priceDetails.period ?? 'once'}",
+                    style: TextStyle(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.location_pin,
+                        size: 12,
+                        color: theme.hintColor,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          product.locationData.cityName,
+                          style: TextStyle(
+                            color: theme.hintColor,
+                            fontSize: 11,
+                          ),
+                          maxLines: 1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
