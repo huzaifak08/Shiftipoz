@@ -10,6 +10,7 @@ import 'package:shiftipoz/models/location_data.dart';
 import 'package:shiftipoz/providers/my_product_provider/my_product_provider.dart';
 import 'package:shiftipoz/providers/product_provider/product_provider.dart';
 import 'package:shiftipoz/providers/auth_provider/auth_provider.dart';
+import 'package:shiftipoz/services/location_service.dart';
 
 class AddUpdateProductView extends ConsumerStatefulWidget {
   final ProductModel? productModel;
@@ -37,11 +38,6 @@ class _AddProductViewState extends ConsumerState<AddUpdateProductView> {
   String _selectedPeriod = 'day';
   CategoryType _selectedCategory = CategoryType.books;
   bool _isUpdate = false;
-
-  // Dummy Location (Replace with Geolocator logic later)
-  final double _lat = 33.6844;
-  final double _lng = 73.0479;
-  final String _city = "Islamabad";
 
   @override
   void initState() {
@@ -106,13 +102,28 @@ class _AddProductViewState extends ConsumerState<AddUpdateProductView> {
     final user = ref.read(authControllerProvider).value;
     if (user == null) return;
 
+    // 1. Fetch Real Location Data
+    // This uses the helper service logic (ensure you have Geolocator/Geocoding installed)
+    final locData = await LocationService.getCurrentLocation();
+
+    if (locData == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Location permission is required to post."),
+          ),
+        );
+      }
+      return;
+    }
+
+    // 2. Build the Product Model with Real Data
     final draftProduct = ProductModel(
       id: _isUpdate ? widget.productModel!.id : '',
       ownerId: user.uid,
       title: _titleController.text.trim(),
       description: _descController.text.trim(),
-      images:
-          _existingNetworkImages, // Pass existing ones, service will handle new ones
+      images: _existingNetworkImages,
       categoryType: _selectedCategory,
       transactionType: _selectedType,
       priceDetails: PriceDetails(
@@ -122,11 +133,11 @@ class _AddProductViewState extends ConsumerState<AddUpdateProductView> {
         isFree: _selectedType == TransactionType.giveaway,
       ),
       locationData: LocationData(
-        latitude: _lat,
-        longitude: _lng,
-        geohash: _isUpdate ? widget.productModel!.locationData.geohash : '',
-        cityName: _city,
-        addressHidden: "Wah Cantt, Pakistan",
+        latitude: locData['lat'], // Real Lat
+        longitude: locData['lng'], // Real Lng
+        geohash: locData['hash'], // Real Geohash (e.g., "u36v...")
+        cityName: locData['city'], // Real City (e.g., "Wah Cantt")
+        addressHidden: "Approximate Location",
       ),
       metadata: {'author': _authorController.text.trim(), 'condition': 'Good'},
       isAvailable: true,
@@ -134,6 +145,7 @@ class _AddProductViewState extends ConsumerState<AddUpdateProductView> {
       isSynced: true,
     );
 
+    // 3. Dispatch to Providers
     if (_isUpdate) {
       await ref
           .read(myProductsProvider.notifier)
