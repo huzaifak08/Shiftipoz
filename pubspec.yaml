@@ -31,6 +31,7 @@ dependencies:
   app_settings: ^7.0.0
   cloud_firestore: ^6.2.0
   cupertino_icons: ^1.0.8
+  firebase_app_check: ^0.4.3
   firebase_auth: ^6.3.0
   firebase_core: ^4.6.0
   firebase_messaging: ^16.1.3

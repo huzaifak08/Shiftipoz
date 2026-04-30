@@ -1,3 +1,4 @@
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +7,7 @@ import 'package:shiftipoz/helpers/app_data.dart';
 import 'package:shiftipoz/helpers/theme.dart';
 import 'package:shiftipoz/providers/app_provider_container.dart';
 import 'package:shiftipoz/views/splash_view.dart';
+import 'dart:developer' as dev;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,6 +16,13 @@ void main() async {
   await LocalCacheManager.initDatabase();
 
   await Firebase.initializeApp();
+
+  // Firebase App Check:
+  FirebaseAppCheck firebaseAppCheck = FirebaseAppCheck.instance;
+  await firebaseAppCheck.activate(providerAndroid: AndroidDebugProvider());
+  await firebaseAppCheck.getToken().then(
+    (value) => dev.log(value.toString(), name: 'App Check Token'),
+  );
 
   runApp(
     ProviderScope(
