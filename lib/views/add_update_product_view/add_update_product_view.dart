@@ -31,9 +31,8 @@ class _AddProductViewState extends ConsumerState<AddUpdateProductView> {
   late final TextEditingController _authorController;
 
   // --- STATE VARIABLES ---
-  final List<File> _newImages = []; // Images picked from gallery
-  List<String> _existingNetworkImages = []; // Images already on Firebase
-
+  final List<File> _newImages = [];
+  List<String> _existingNetworkImages = [];
   TransactionType _selectedType = TransactionType.giveaway;
   String _selectedPeriod = 'day';
   CategoryType _selectedCategory = CategoryType.books;
@@ -44,7 +43,6 @@ class _AddProductViewState extends ConsumerState<AddUpdateProductView> {
     super.initState();
     _isUpdate = widget.productModel != null;
 
-    // Initialize controllers with existing data if updating
     _titleController = TextEditingController(text: widget.productModel?.title);
     _descController = TextEditingController(
       text: widget.productModel?.description,
@@ -92,32 +90,12 @@ class _AddProductViewState extends ConsumerState<AddUpdateProductView> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_newImages.isEmpty && _existingNetworkImages.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Add at least one image")));
-      return;
-    }
-
     final user = ref.read(authControllerProvider).value;
     if (user == null) return;
 
-    // 1. Fetch Real Location Data
-    // This uses the helper service logic (ensure you have Geolocator/Geocoding installed)
     final locData = await LocationService.getCurrentLocation();
+    if (locData == null) return;
 
-    if (locData == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Location permission is required to post."),
-          ),
-        );
-      }
-      return;
-    }
-
-    // 2. Build the Product Model with Real Data
     final draftProduct = ProductModel(
       id: _isUpdate ? widget.productModel!.id : '',
       ownerId: user.uid,
@@ -127,16 +105,22 @@ class _AddProductViewState extends ConsumerState<AddUpdateProductView> {
       categoryType: _selectedCategory,
       transactionType: _selectedType,
       priceDetails: PriceDetails(
-        value: double.tryParse(_priceController.text) ?? 0.0,
+        value:
+            (_selectedType == TransactionType.sell ||
+                _selectedType == TransactionType.rent)
+            ? (double.tryParse(_priceController.text) ?? 0.0)
+            : 0.0,
         period: _selectedType == TransactionType.rent ? _selectedPeriod : null,
-        securityDeposit: double.tryParse(_securityController.text),
+        securityDeposit: _selectedType == TransactionType.borrow
+            ? (double.tryParse(_securityController.text) ?? 5.0)
+            : null,
         isFree: _selectedType == TransactionType.giveaway,
       ),
       locationData: LocationData(
-        latitude: locData['lat'], // Real Lat
-        longitude: locData['lng'], // Real Lng
-        geohash: locData['hash'], // Real Geohash (e.g., "u36v...")
-        cityName: locData['city'], // Real City (e.g., "Wah Cantt")
+        latitude: locData['lat'],
+        longitude: locData['lng'],
+        geohash: locData['hash'],
+        cityName: locData['city'],
         addressHidden: "Approximate Location",
       ),
       metadata: {'author': _authorController.text.trim(), 'condition': 'Good'},
@@ -145,7 +129,6 @@ class _AddProductViewState extends ConsumerState<AddUpdateProductView> {
       isSynced: true,
     );
 
-    // 3. Dispatch to Providers
     if (_isUpdate) {
       await ref
           .read(myProductsProvider.notifier)
@@ -166,10 +149,7 @@ class _AddProductViewState extends ConsumerState<AddUpdateProductView> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          _isUpdate ? "Edit Listing" : "List a New Item",
-          style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1),
-        ),
+        title: Text(_isUpdate ? "Edit Listing" : "List a New Item"),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -181,13 +161,8 @@ class _AddProductViewState extends ConsumerState<AddUpdateProductView> {
             children: [
               _buildImageSection(theme),
               const SizedBox(height: 30),
-              _buildSectionTitle("Book Details", theme),
-              _buildTextField(
-                _titleController,
-                "Product Title",
-                Icons.title,
-                theme,
-              ),
+              _buildSectionTitle("Product Details", theme),
+              _buildTextField(_titleController, "Title", Icons.title, theme),
               _buildTextField(
                 _descController,
                 "Description",
@@ -208,10 +183,8 @@ class _AddProductViewState extends ConsumerState<AddUpdateProductView> {
               _buildSectionTitle("Transaction Type", theme),
               _buildTransactionSelector(theme),
 
-              if (_selectedType != TransactionType.giveaway) ...[
-                const SizedBox(height: 20),
-                _buildPriceSection(theme),
-              ],
+              const SizedBox(height: 20),
+              _buildPriceSection(theme),
 
               const SizedBox(height: 40),
               CustomButton(
@@ -228,50 +201,80 @@ class _AddProductViewState extends ConsumerState<AddUpdateProductView> {
     );
   }
 
-  Widget _buildImageSection(ThemeData theme) {
-    return SizedBox(
-      height: 140,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: [
-          // ADD BUTTON
-          GestureDetector(
-            onTap: _pickImages,
-            child: Container(
-              width: 110,
-              margin: const EdgeInsets.only(right: 12),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.2),
-                  width: 2,
+  Widget _buildPriceSection(ThemeData theme) {
+    if (_selectedType == TransactionType.giveaway) {
+      return const SizedBox.shrink();
+    }
+
+    final bool isRent = _selectedType == TransactionType.rent;
+    final bool isBorrow = _selectedType == TransactionType.borrow;
+    final bool isSell = _selectedType == TransactionType.sell;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (isSell || isRent)
+          Row(
+            children: [
+              Expanded(
+                child: _buildTextField(
+                  _priceController,
+                  isRent ? "Rental Fee" : "Sale Price",
+                  Icons.payments_outlined,
+                  theme,
+                  keyboardType: TextInputType.number,
                 ),
               ),
-              child: Icon(
-                Icons.add_a_photo_outlined,
-                color: theme.colorScheme.primary,
+              if (isRent) ...[
+                const SizedBox(width: 15),
+                _buildPeriodDropdown(theme),
+              ],
+            ],
+          ),
+
+        if (isBorrow) ...[
+          _buildTextField(
+            _securityController,
+            "Security Deposit (Min. 5.0)",
+            Icons.security_rounded,
+            theme,
+            keyboardType: TextInputType.number,
+            validator: (v) {
+              final val = double.tryParse(v ?? "");
+              if (val == null || val < 5.0) {
+                return "Min. 5.0 insurance required for borrow";
+              }
+              return null;
+            },
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 10),
+            child: Text(
+              "Insurance: This deposit protects you if the item is damaged.",
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.hintColor,
               ),
-            ),
-          ),
-          // EXISTING NETWORK IMAGES
-          ..._existingNetworkImages.map(
-            (url) => _ImagePreviewTile(
-              imagePath: url,
-              isNetwork: true,
-              onDelete: () =>
-                  setState(() => _existingNetworkImages.remove(url)),
-            ),
-          ),
-          // NEW FILE IMAGES
-          ..._newImages.map(
-            (file) => _ImagePreviewTile(
-              imagePath: file.path,
-              isNetwork: false,
-              onDelete: () => setState(() => _newImages.remove(file)),
             ),
           ),
         ],
+      ],
+    );
+  }
+
+  Widget _buildPeriodDropdown(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: DropdownButton<String>(
+        value: _selectedPeriod,
+        underline: const SizedBox(),
+        items: ['day', 'week', 'month']
+            .map((p) => DropdownMenuItem(value: p, child: Text("per $p")))
+            .toList(),
+        onChanged: (val) => setState(() => _selectedPeriod = val!),
       ),
     );
   }
@@ -304,8 +307,8 @@ class _AddProductViewState extends ConsumerState<AddUpdateProductView> {
                     color: isSelected
                         ? Colors.white
                         : theme.colorScheme.onSurface,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    // fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
@@ -316,42 +319,6 @@ class _AddProductViewState extends ConsumerState<AddUpdateProductView> {
     );
   }
 
-  Widget _buildPriceSection(ThemeData theme) {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildTextField(
-            _priceController,
-            "Price",
-            Icons.payments_outlined,
-            theme,
-            keyboardType: TextInputType.number,
-          ),
-        ),
-        if (_selectedType == TransactionType.rent) ...[
-          const SizedBox(width: 15),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest.withValues(
-                alpha: 0.3,
-              ),
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: DropdownButton<String>(
-              value: _selectedPeriod,
-              underline: const SizedBox(),
-              items: ['day', 'week', 'month']
-                  .map((p) => DropdownMenuItem(value: p, child: Text("per $p")))
-                  .toList(),
-              onChanged: (val) => setState(() => _selectedPeriod = val!),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
   Widget _buildTextField(
     TextEditingController controller,
     String hint,
@@ -359,6 +326,7 @@ class _AddProductViewState extends ConsumerState<AddUpdateProductView> {
     ThemeData theme, {
     int maxLines = 1,
     TextInputType? keyboardType,
+    String? Function(String?)? validator,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 15),
@@ -366,6 +334,9 @@ class _AddProductViewState extends ConsumerState<AddUpdateProductView> {
         controller: controller,
         maxLines: maxLines,
         keyboardType: keyboardType,
+        validator:
+            validator ??
+            (v) => (v == null || v.isEmpty) ? "Required field" : null,
         decoration: InputDecoration(
           hintText: hint,
           prefixIcon: Icon(icon, size: 20),
@@ -378,7 +349,51 @@ class _AddProductViewState extends ConsumerState<AddUpdateProductView> {
             borderSide: BorderSide.none,
           ),
         ),
-        validator: (v) => v!.isEmpty ? "Required field" : null,
+      ),
+    );
+  }
+
+  Widget _buildImageSection(ThemeData theme) {
+    return SizedBox(
+      height: 140,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          GestureDetector(
+            onTap: _pickImages,
+            child: Container(
+              width: 110,
+              margin: const EdgeInsets.only(right: 12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                  width: 2,
+                ),
+              ),
+              child: Icon(
+                Icons.add_a_photo_outlined,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+          ),
+          ..._existingNetworkImages.map(
+            (url) => _ImagePreviewTile(
+              imagePath: url,
+              isNetwork: true,
+              onDelete: () =>
+                  setState(() => _existingNetworkImages.remove(url)),
+            ),
+          ),
+          ..._newImages.map(
+            (file) => _ImagePreviewTile(
+              imagePath: file.path,
+              isNetwork: false,
+              onDelete: () => setState(() => _newImages.remove(file)),
+            ),
+          ),
+        ],
       ),
     );
   }
