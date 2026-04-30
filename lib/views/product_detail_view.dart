@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shiftipoz/components/delete_dialog.dart';
 import 'package:shiftipoz/helpers/app_data.dart';
 import 'package:shiftipoz/models/product_model.dart';
+import 'package:shiftipoz/models/user_model.dart';
 import 'package:shiftipoz/providers/auth_provider/auth_provider.dart';
+import 'package:shiftipoz/providers/chat_provider/chat_provider.dart';
 import 'package:shiftipoz/providers/my_product_provider/my_product_provider.dart';
+import 'package:shiftipoz/providers/user_provider/user_provider.dart';
 import 'package:shiftipoz/views/add_update_product_view/add_update_product_view.dart';
 
 class ProductDetailView extends ConsumerStatefulWidget {
@@ -80,7 +83,9 @@ class _ProductDetailViewState extends ConsumerState<ProductDetailView> {
                         ),
                       ),
                       const SizedBox(height: 24),
-                      _buildSellerInfo(theme),
+                      isOwner
+                          ? SizedBox.shrink()
+                          : _buildSellerInfo(theme, ref),
                       const SizedBox(height: 120), // Bottom padding for buttons
                     ],
                   ),
@@ -184,36 +189,85 @@ class _ProductDetailViewState extends ConsumerState<ProductDetailView> {
     );
   }
 
-  Widget _buildSellerInfo(ThemeData theme) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          const CircleAvatar(
-            backgroundColor: Colors.grey,
-            child: Icon(Icons.person, color: Colors.white),
+  Widget _buildSellerInfo(ThemeData theme, WidgetRef ref) {
+    // 1. Watch the userProfileProvider with the product's ownerId
+    final sellerAsync = ref.watch(userProfileProvider(widget.product.ownerId));
+
+    return sellerAsync.when(
+      data: (seller) {
+        if (seller == null) {
+          return const Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Text("Seller information not found"),
+          );
+        }
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.2,
+            ),
+            borderRadius: BorderRadius.circular(20),
           ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              const Text(
-                "Seller Profile",
-                style: TextStyle(fontWeight: FontWeight.bold),
+              // Seller Avatar
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: theme.colorScheme.primary.withValues(
+                  alpha: 0.1,
+                ),
+                backgroundImage: (seller.profilePic.isNotEmpty)
+                    ? NetworkImage(seller.profilePic)
+                    : null,
+                child: (seller.profilePic.isEmpty)
+                    ? Icon(Icons.person, color: theme.colorScheme.primary)
+                    : null,
               ),
-              Text(
-                "Member since 2026",
-                style: TextStyle(color: theme.hintColor, fontSize: 12),
+              const SizedBox(width: 12),
+              // Seller Name and Details
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      seller.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      "Member since 2026", // You can replace this with seller.createdAt if available
+                      style: TextStyle(color: theme.hintColor, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              // Message/View Profile Button
+              TextButton(
+                onPressed: () => _handleChatNavigation(ref, context, seller),
+                child: const Text("Message"),
               ),
             ],
           ),
-          const Spacer(),
-          TextButton(onPressed: () {}, child: const Text("View Profile")),
-        ],
+        );
+      },
+      // Loading State
+      loading: () => const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20.0),
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      ),
+      // Error State
+      error: (e, stack) => Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Text(
+          "Error loading seller: $e",
+          style: const TextStyle(color: Colors.red),
+        ),
       ),
     );
   }
@@ -285,27 +339,67 @@ class _ProductDetailViewState extends ConsumerState<ProductDetailView> {
                   ),
                 ],
               )
-            : Row(
-                children: [
-                  _SquareButton(
-                    icon: Icons.chat_bubble_outline_rounded,
-                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                    iconColor: theme.colorScheme.primary,
-                    onTap: () {},
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _LargeButton(
-                      label: "I'M INTERESTED",
-                      icon: Icons.auto_awesome,
-                      color: theme.colorScheme.primary,
-                      onTap: () {},
+            : Consumer(
+                builder: (context, ref, child) {
+                  final sellerAsync = ref.watch(
+                    userProfileProvider(widget.product.ownerId),
+                  );
+                  return sellerAsync.when(
+                    data: (seller) => Row(
+                      children: [
+                        _SquareButton(
+                          icon: Icons.chat_bubble_outline_rounded,
+                          color: theme.colorScheme.primary.withValues(
+                            alpha: 0.1,
+                          ),
+                          iconColor: theme.colorScheme.primary,
+                          onTap: () =>
+                              _handleChatNavigation(ref, context, seller!),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _LargeButton(
+                            label: "I'M INTERESTED",
+                            icon: Icons.auto_awesome,
+                            color: theme.colorScheme.primary,
+                            onTap: () {},
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                    error: (error, stackTrace) => Text("error"),
+                    loading: () => Center(child: CircularProgressIndicator()),
+                  );
+                },
               ),
       ),
     );
+  }
+
+  void _handleChatNavigation(
+    WidgetRef ref,
+    BuildContext context,
+    UserModel seller,
+  ) {
+    final productContext = {
+      'id': widget.product.id,
+      'title': widget.product.title,
+      'image': widget.product.images.isNotEmpty
+          ? widget.product.images.first
+          : '',
+      'price': widget.product.priceDetails.value,
+      'type': widget.product.transactionType.name,
+    };
+
+    ref
+        .read(chatControllerProvider.notifier)
+        .navigateToChat(
+          context: context,
+          receiverId: seller.uid,
+          receiverName: seller.name,
+          receiverImage: seller.profilePic,
+          productContext: productContext,
+        );
   }
 
   void _openFullScreenPreview(BuildContext context, int initialIndex) {

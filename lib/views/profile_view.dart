@@ -10,7 +10,7 @@ import 'package:shiftipoz/models/user_model.dart';
 import 'package:shiftipoz/providers/auth_provider/auth_provider.dart';
 import 'package:shiftipoz/providers/navigation_provider/navigation_provider.dart';
 import 'package:shiftipoz/providers/product_provider/product_provider.dart';
-import 'package:shiftipoz/providers/user_provider/user_provider.dart';
+import 'package:shiftipoz/providers/current_user_provider/current_user_provider.dart';
 import 'package:shiftipoz/views/auth/sign_in_view.dart';
 import 'package:shiftipoz/views/auth/verify_email_view.dart';
 
@@ -30,7 +30,7 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
   void initState() {
     super.initState();
     // Initialize controller with current name from provider
-    final user = ref.read(userProvider).value;
+    final user = ref.read(currentUserProvider).value;
     _nameController = TextEditingController(text: user?.name ?? "");
   }
 
@@ -45,7 +45,7 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
 
     final updatedUser = user.copyWith(name: _nameController.text.trim());
 
-    await ref.read(userProvider.notifier).updateProfile(updatedUser);
+    await ref.read(currentUserProvider.notifier).updateProfile(updatedUser);
 
     setState(() => _isEditing = false);
 
@@ -59,7 +59,7 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final userState = ref.watch(userProvider);
+    final userState = ref.watch(currentUserProvider);
     final auth = ref.watch(authControllerProvider).value;
 
     return Scaffold(
@@ -172,7 +172,7 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
                         onPressed: () async {
                           if (_selectedImage != null) {
                             await ref
-                                .read(userProvider.notifier)
+                                .read(currentUserProvider.notifier)
                                 .changeProfilePicture(_selectedImage!);
 
                             setState(() {
@@ -369,7 +369,7 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
               // 4. Invalidate providers IMMEDIATELY
               // This forces them into a loading/null state so they don't try to sync
               ref.invalidate(productProvider);
-              ref.invalidate(userProvider);
+              ref.invalidate(currentUserProvider);
 
               // 5. Perform Logout (This will update authControllerProvider state)
               await ref.read(authControllerProvider.notifier).logout();

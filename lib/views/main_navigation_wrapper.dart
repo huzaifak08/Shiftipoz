@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shiftipoz/providers/navigation_provider/navigation_provider.dart';
 import 'package:shiftipoz/views/home_view.dart';
+import 'package:shiftipoz/views/inbox_view.dart';
 import 'package:shiftipoz/views/my_product_view.dart';
 import 'package:shiftipoz/views/products_view/products_view.dart';
 import 'package:shiftipoz/views/profile_view.dart';
@@ -18,7 +19,7 @@ class MainNavigationWrapper extends ConsumerWidget {
       const HomeView(), // 0: Unit Conversion
       const ProductsView(), // 1: Marketplace
       const MyProductView(), // 2: User's Own Products (NEW)
-      const _PlaceholderView(title: "Chats"), // 3: Chats
+      const InboxView(),
       const ProfileView(), // 4: Profile
     ];
 
@@ -157,35 +158,6 @@ class _NavBarItem extends StatelessWidget {
                 ),
               ),
             ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// Simple Stateless Placeholder for Chats
-class _PlaceholderView extends StatelessWidget {
-  final String title;
-  const _PlaceholderView({required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.hourglass_empty_rounded,
-              size: 60,
-              color: Theme.of(context).hintColor.withValues(alpha: 0.2),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              "$title View Coming Soon",
-              style: const TextStyle(color: Colors.grey),
-            ),
           ],
         ),
       ),
