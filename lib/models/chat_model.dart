@@ -21,18 +21,27 @@ class ChatModel {
     required this.updatedAt,
   });
 
-  // --- From JSON (Firestore) ---
   factory ChatModel.fromJson(Map<String, dynamic> json, String docId) {
+    final rawUnreadMap = json['unreadCount'];
+    Map<String, int> parsedUnread = {};
+
+    if (rawUnreadMap is Map) {
+      rawUnreadMap.forEach((key, value) {
+        // Ensure we convert any number type from Firestore to int
+        parsedUnread[key.toString()] = (value is num) ? value.toInt() : 0;
+      });
+    }
+
     return ChatModel(
-      id: docId, // <--- Ensure the document ID is assigned here
+      id: docId,
       participants: List<String>.from(json['participants'] ?? []),
       lastMessage: json['lastMessage'],
-      unreadCount: Map<String, int>.from(json['unreadCount'] ?? {}),
+      unreadCount: parsedUnread,
       lastSeenMessageId: Map<String, String>.from(
         json['lastSeenMessageId'] ?? {},
       ),
-      isTyping: Map<String, bool>.from(json['isTyping'] ?? {}),
       activeProductContext: json['activeProductContext'],
+      isTyping: Map<String, bool>.from(json['isTyping'] ?? {}),
       updatedAt: (json['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }

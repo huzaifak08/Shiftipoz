@@ -21,8 +21,9 @@ class ChatService {
 
   // --- STREAMS ---
 
-  // Update your ChatService getInbox map logic
   Stream<List<ChatModel>> getInbox(String uid) {
+    dev.log("📡 [INBOX_SUB] Subscribing for UID: $uid", name: "CHAT_DEBUG");
+
     return _firestore
         .collection('chats')
         .where('participants', arrayContains: uid)
@@ -30,14 +31,33 @@ class ChatService {
         .snapshots()
         .map(
           (snap) => snap.docs.map((doc) {
-            // Pass doc.id specifically if your model doesn't handle it in fromJson
-            return ChatModel.fromJson(doc.data(), doc.id);
+            final data = doc.data();
+
+            // --- UNREAD COUNT DEBUG LOG ---
+            // This logs the raw 'unreadCount' field to see if it's a Map or null
+            final rawUnread = data['unreadCount'];
+            dev.log(
+              "📥 [INBOX_RAW] Room: ${doc.id} | unreadCount Field Type: ${rawUnread.runtimeType} | Content: $rawUnread",
+              name: "CHAT_DEBUG",
+            );
+
+            // Check if there are "flat" fields with dots (e.g., unreadCount.UID)
+            // that shouldn't be there if using nested Maps correctly.
+            data.forEach((key, value) {
+              if (key.contains('unreadCount.')) {
+                dev.log(
+                  "⚠️ [INBOX_WARNING] Found FLAT field: $key = $value. This should be INSIDE the unreadCount map!",
+                  name: "CHAT_DEBUG",
+                );
+              }
+            });
+
+            return ChatModel.fromJson(data, doc.id);
           }).toList(),
         );
   }
 
   Stream<List<MessageModel>> getMessages(String chatId) {
-    print("chat id " + chatId);
     dev.log("📡 [MSG_SUB] Room: $chatId", name: "CHAT_DEBUG");
     return _firestore
         .collection('chats')
@@ -71,6 +91,8 @@ class ChatService {
 
   // --- CHAT ACTIONS ---
 
+  // Inside ChatService.sendMessage
+  /// Send a message and update the parent Chat document (Inbox Metadata)
   Future<void> sendMessage({
     required String chatId,
     required MessageModel message,
@@ -81,10 +103,12 @@ class ChatService {
       "🚀 [SEND_INIT] To: $receiverId | ChatID: $chatId",
       name: "CHAT_DEBUG",
     );
+
     try {
       final chatRef = _firestore.collection('chats').doc(chatId);
       final messageRef = chatRef.collection('messages').doc();
 
+      // Assign the generated Firestore ID to the message model
       final finalMessage = message.copyWith(id: messageRef.id);
       final messageData = finalMessage.toJson();
 
@@ -92,11 +116,12 @@ class ChatService {
 
       WriteBatch batch = _firestore.batch();
 
-      // 1. Set message in subcollection
+      // 1. Set the message document in the sub-collection
       batch.set(messageRef, messageData);
 
-      // 2. Update parent metadata
-      final chatMetadata = {
+      // 2. Prepare the metadata update for the Inbox
+      // Using dot notation here with batch.update ensures we target the nested Map
+      final Map<String, dynamic> chatMetadata = {
         'lastMessage': {
           'text': message.type == MessageType.text
               ? message.content
@@ -105,26 +130,57 @@ class ChatService {
           'timestamp': FieldValue.serverTimestamp(),
         },
         'updatedAt': FieldValue.serverTimestamp(),
-        'unreadCount.$receiverId': FieldValue.increment(1),
+        'unreadCount.$receiverId': FieldValue.increment(
+          1,
+        ), // Increments receiver's counter
         'activeProductContext': productContext,
         'participants': FieldValue.arrayUnion([message.senderId, receiverId]),
       };
 
       dev.log(
-        "📝 [SEND_METADATA] Updating Inbox Metadata...",
+        "📝 [SEND_METADATA] Updating Inbox Metadata via batch.update",
         name: "CHAT_DEBUG",
       );
-      batch.set(chatRef, chatMetadata, SetOptions(merge: true));
+
+      // We use update() to ensure unreadCount is treated as a Map path
+      batch.update(chatRef, chatMetadata);
 
       await batch.commit();
-      dev.log("✅ [SEND_SUCCESS] Batch committed.", name: "CHAT_DEBUG");
-    } catch (e) {
       dev.log(
-        "❌ [SEND_ERROR]",
+        "✅ [SEND_SUCCESS] Batch committed successfully.",
         name: "CHAT_DEBUG",
-        error: e,
-        stackTrace: StackTrace.current,
       );
+    } on FirebaseException catch (e) {
+      // Handle cases where the chat document doesn't exist yet (First Message)
+      if (e.code == 'not-found') {
+        dev.log(
+          "🆕 [SEND_NEW] Room doesn't exist. Creating new chat document...",
+          name: "CHAT_DEBUG",
+        );
+
+        await _firestore.collection('chats').doc(chatId).set({
+          'participants': [message.senderId, receiverId],
+          'unreadCount': {receiverId: 1, message.senderId: 0},
+          'lastMessage': {
+            'text': message.type == MessageType.text
+                ? message.content
+                : "[Media]",
+            'senderId': message.senderId,
+            'timestamp': FieldValue.serverTimestamp(),
+          },
+          'updatedAt': FieldValue.serverTimestamp(),
+          'activeProductContext': productContext,
+        }, SetOptions(merge: true));
+      } else {
+        dev.log(
+          "❌ [SEND_ERROR] Firebase error: ${e.message}",
+          name: "CHAT_DEBUG",
+          error: e,
+        );
+        rethrow;
+      }
+    } catch (e) {
+      dev.log("❌ [SEND_ERROR] Unknown error", name: "CHAT_DEBUG", error: e);
       rethrow;
     }
   }

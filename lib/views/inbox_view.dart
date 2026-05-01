@@ -4,6 +4,7 @@ import 'package:shiftipoz/models/chat_model.dart';
 import 'package:shiftipoz/providers/auth_provider/auth_provider.dart';
 import 'package:shiftipoz/providers/chat_provider/chat_provider.dart';
 import 'package:shiftipoz/providers/user_provider/user_provider.dart';
+import 'package:shiftipoz/utils/date_formatter.dart';
 import 'package:shiftipoz/views/chats_view/chats_view.dart';
 import 'dart:developer' as dev;
 
@@ -69,9 +70,12 @@ class _InboxTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    print(chat.updatedAt);
     final theme = Theme.of(context);
     final myUid = ref.watch(authControllerProvider).value?.uid;
+
+    final int unread = chat.unreadCount[myUid] ?? 0;
+    print("Unread Messages: $unread");
+    final bool hasUnread = unread > 0;
 
     // Find the other user's ID
     final otherUid = chat.participants.firstWhere(
@@ -81,9 +85,6 @@ class _InboxTile extends ConsumerWidget {
 
     // Watch the live profile of the other person
     final otherUserAsync = ref.watch(userProfileProvider(otherUid));
-
-    final String formattedTime =
-        "${chat.updatedAt.hour.toString().padLeft(2, '0')}:${chat.updatedAt.minute.toString().padLeft(2, '0')}";
 
     return ListTile(
       // Inside _InboxTile
@@ -130,10 +131,27 @@ class _InboxTile extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Text(
-            formattedTime,
-            style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
+            DateFormatter.formatChatTime(chat.updatedAt),
+            style: theme.textTheme.bodySmall,
           ),
-          // Optional: Add unread badge here later
+          const SizedBox(height: 4),
+          // 3. The Counter Badge
+          if (hasUnread)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                unread > 99 ? "99+" : "$unread",
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
         ],
       ),
     );

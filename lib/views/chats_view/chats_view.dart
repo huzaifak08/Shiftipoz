@@ -17,21 +17,22 @@ class _ChatViewState extends ConsumerState<ChatView> {
   final TextEditingController _msgController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
-  // Inside _ChatViewState
   @override
   void initState() {
-    super.initState();
     Future.microtask(() {
-      // Check if the map is NOT empty before accessing .values.first
-      if (widget.chat.lastSeenMessageId.isNotEmpty) {
+      final myUid = ref.read(authControllerProvider).value?.uid;
+
+      // Safety check to ensure we have messages and a valid UID
+      if (myUid != null && widget.chat.lastMessage != null) {
+        final lastMsgId = widget.chat.lastMessage?['id'] ?? '';
+
+        // Resets unreadCount.$myUid to 0 in Firestore
         ref
-            .read(chatControllerProvider.notifier)
-            .updateReadStatus(
-              widget.chat.id,
-              widget.chat.lastSeenMessageId.values.first,
-            );
+            .read(chatServiceProvider)
+            .markAsRead(widget.chat.id, myUid, lastMsgId);
       }
     });
+    super.initState();
   }
 
   void _onSend() {
