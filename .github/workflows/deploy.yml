@@ -1,9 +1,10 @@
-name: Shiftipoz Play Store & GitHub Release
+name: Shiftipoz Build & Release
 
 on:
   push:
     branches:
       - master
+      - staging
 
 permissions:
   contents: write
@@ -32,8 +33,9 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
-      # Build the AAB (Required for Play Store)
+      # Build the AAB - ONLY for master branch
       - name: Build App Bundle
+        if: github.ref == 'refs/heads/master'
         env:
           RUN_NUMBER: ${{ github.run_number }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -45,7 +47,7 @@ jobs:
           --build-name=1.0.0 \
           --build-number=$BUILD_NUMBER
 
-      # Build the APK (For GitHub Release)
+      # Build the APK - For BOTH branches
       - name: Build APK
         env:
           RUN_NUMBER: ${{ github.run_number }}
@@ -58,8 +60,17 @@ jobs:
           --build-name=1.0.0 \
           --build-number=$BUILD_NUMBER
 
-      # 1. Create GitHub Release
+      # Upload Artifact - Staging only (to keep it clean)
+      - name: Upload APK to Artifacts
+        if: github.ref == 'refs/heads/staging'
+        uses: actions/upload-artifact@v4
+        with:
+          name: shiftipoz-staging-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      # Create GitHub Release - ONLY for master branch
       - name: Create GitHub Release
+        if: github.ref == 'refs/heads/master'
         uses: softprops/action-gh-release@v2
         with:
           files: |
@@ -72,8 +83,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # 2. Upload to Google Play (Internal Track)
+      # Upload to Play Store - ONLY for master branch
       - name: Upload to Play Store
+        if: github.ref == 'refs/heads/master'
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_CONFIG_JSON }}
