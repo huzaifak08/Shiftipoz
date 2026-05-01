@@ -8,7 +8,9 @@ import 'package:shiftipoz/providers/auth_provider/auth_provider.dart';
 import 'package:shiftipoz/providers/chat_provider/chat_provider.dart';
 import 'package:shiftipoz/providers/my_product_provider/my_product_provider.dart';
 import 'package:shiftipoz/providers/user_provider/user_provider.dart';
+import 'package:shiftipoz/utils/date_formatter.dart';
 import 'package:shiftipoz/views/add_update_product_view/add_update_product_view.dart';
+import 'package:shimmer/shimmer.dart';
 
 class ProductDetailView extends ConsumerStatefulWidget {
   final ProductModel product;
@@ -190,17 +192,11 @@ class _ProductDetailViewState extends ConsumerState<ProductDetailView> {
   }
 
   Widget _buildSellerInfo(ThemeData theme, WidgetRef ref) {
-    // 1. Watch the userProfileProvider with the product's ownerId
     final sellerAsync = ref.watch(userProfileProvider(widget.product.ownerId));
 
     return sellerAsync.when(
       data: (seller) {
-        if (seller == null) {
-          return const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Text("Seller information not found"),
-          );
-        }
+        if (seller == null) return _buildErrorState(theme, "Not Found");
 
         return Container(
           padding: const EdgeInsets.all(16),
@@ -212,7 +208,6 @@ class _ProductDetailViewState extends ConsumerState<ProductDetailView> {
           ),
           child: Row(
             children: [
-              // Seller Avatar
               CircleAvatar(
                 radius: 24,
                 backgroundColor: theme.colorScheme.primary.withValues(
@@ -226,7 +221,6 @@ class _ProductDetailViewState extends ConsumerState<ProductDetailView> {
                     : null,
               ),
               const SizedBox(width: 12),
-              // Seller Name and Details
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -239,13 +233,12 @@ class _ProductDetailViewState extends ConsumerState<ProductDetailView> {
                       ),
                     ),
                     Text(
-                      "Member since 2026", // You can replace this with seller.createdAt if available
+                      "Member since ${DateFormatter.formatMonthYear(seller.createdAt)}",
                       style: TextStyle(color: theme.hintColor, fontSize: 12),
                     ),
                   ],
                 ),
               ),
-              // Message/View Profile Button
               TextButton(
                 onPressed: () => _handleChatNavigation(ref, context, seller),
                 child: const Text("Message"),
@@ -254,20 +247,96 @@ class _ProductDetailViewState extends ConsumerState<ProductDetailView> {
           ),
         );
       },
-      // Loading State
-      loading: () => const Center(
-        child: Padding(
-          padding: EdgeInsets.all(20.0),
-          child: CircularProgressIndicator(strokeWidth: 2),
+      loading: () => _buildShimmerLoading(theme),
+      error: (e, stack) => _buildErrorState(theme, e),
+    );
+  }
+
+  Widget _buildShimmerLoading(ThemeData theme) {
+    return Shimmer.fromColors(
+      baseColor: theme.colorScheme.surfaceContainerHighest.withValues(
+        alpha: 0.3,
+      ),
+      highlightColor: theme.colorScheme.surfaceContainerHighest.withValues(
+        alpha: 0.1,
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            const CircleAvatar(radius: 24, backgroundColor: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 120,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    width: 80,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              width: 60,
+              height: 32,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ],
         ),
       ),
-      // Error State
-      error: (e, stack) => Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Text(
-          "Error loading seller: $e",
-          style: const TextStyle(color: Colors.red),
+    );
+  }
+
+  Widget _buildErrorState(ThemeData theme, Object error) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.errorContainer.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: theme.colorScheme.error.withValues(alpha: 0.2),
         ),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, color: theme.colorScheme.error),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              "Couldn't load seller info",
+              style: TextStyle(
+                color: theme.colorScheme.error,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh, size: 20),
+            onPressed: () =>
+                ref.invalidate(userProfileProvider(widget.product.ownerId)),
+          ),
+        ],
       ),
     );
   }

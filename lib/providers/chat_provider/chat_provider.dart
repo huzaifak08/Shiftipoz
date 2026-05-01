@@ -57,8 +57,6 @@ class ChatController extends StateNotifier<AsyncValue<void>> {
 
     final chatId = _service.getChatId(user.uid, receiverId);
 
-    print("Caht id in Provider: ${chatId}");
-
     final chatShell = ChatModel(
       id: chatId,
       participants: [user.uid, receiverId],

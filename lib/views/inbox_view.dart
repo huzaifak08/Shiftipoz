@@ -54,7 +54,7 @@ class InboxView extends ConsumerWidget {
           Icon(
             Icons.chat_bubble_outline_rounded,
             size: 80,
-            color: theme.hintColor.withOpacity(0.2),
+            color: theme.hintColor.withValues(alpha: 0.2),
           ),
           const SizedBox(height: 16),
           Text("No messages yet", style: TextStyle(color: theme.hintColor)),
@@ -74,7 +74,6 @@ class _InboxTile extends ConsumerWidget {
     final myUid = ref.watch(authControllerProvider).value?.uid;
 
     final int unread = chat.unreadCount[myUid] ?? 0;
-    print("Unread Messages: $unread");
     final bool hasUnread = unread > 0;
 
     // Find the other user's ID
@@ -113,7 +112,7 @@ class _InboxTile extends ConsumerWidget {
           radius: 28,
           child: CircularProgressIndicator(strokeWidth: 2),
         ),
-        error: (_, __) =>
+        error: (_, _) =>
             const CircleAvatar(radius: 28, child: Icon(Icons.error)),
       ),
       title: Text(

@@ -55,7 +55,6 @@ class _ChatViewState extends ConsumerState<ChatView> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final messagesAsync = ref.watch(chatMessagesProvider(widget.chat.id));
-    print("id in Chat View: ${widget.chat.id}");
     final myUid = ref.watch(authControllerProvider).value?.uid;
 
     return Scaffold(
@@ -168,11 +167,12 @@ class _ChatViewState extends ConsumerState<ChatView> {
   }
 
   Widget _buildProductContextBar(ThemeData theme) {
-    if (widget.chat.activeProductContext == null)
+    if (widget.chat.activeProductContext == null) {
       return const SizedBox.shrink();
+    }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-      color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
+      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
       child: Row(
         children: [
           ClipRRect(
