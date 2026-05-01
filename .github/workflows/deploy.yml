@@ -70,7 +70,6 @@ jobs:
 
       # Create GitHub Release - ONLY for master branch
       - name: Create GitHub Release
-        if: github.ref == 'refs/heads/master'
         uses: softprops/action-gh-release@v2
         with:
           files: |
