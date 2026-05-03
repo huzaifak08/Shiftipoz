@@ -33,57 +33,51 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
-      # Build the AAB - ONLY for master branch
+      # 1. Build the App Bundle (Standard Production Logic)
       - name: Build App Bundle
-        if: github.ref == 'refs/heads/master'
         env:
           RUN_NUMBER: ${{ github.run_number }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          BUILD_NUMBER=$((RUN_NUMBER + 10))
+          # Simple increment for Play Store compliance
+          BUILD_NUMBER=$((RUN_NUMBER + 20))
+
           flutter build appbundle --release \
           --build-name=1.0.0 \
           --build-number=$BUILD_NUMBER
 
-      # Build the APK - For BOTH branches
-      - name: Build APK
-        env:
-          RUN_NUMBER: ${{ github.run_number }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: |
-          BUILD_NUMBER=$((RUN_NUMBER + 10))
-          flutter build apk --release \
-          --build-name=1.0.0 \
-          --build-number=$BUILD_NUMBER
+      # 2. Build APK (Code preserved but skipped)
+      - name: Build APK (Skipped)
+        if: false
+        run: flutter build apk --release
 
-      # Upload Artifact - Staging only (to keep it clean)
-      - name: Upload APK to Artifacts
-        if: github.ref == 'refs/heads/staging'
-        uses: actions/upload-artifact@v4
-        with:
-          name: shiftipoz-staging-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
-
-      # Create GitHub Release - ONLY for master branch
+      # 3. Create GitHub Release (Master branch only)
       - name: Create GitHub Release
+        if: github.ref == 'refs/heads/master'
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            build/app/outputs/flutter-apk/app-release.apk
-            build/app/outputs/bundle/release/app-release.aab
+          files: build/app/outputs/bundle/release/app-release.aab
           tag_name: v1.0.0-b${{ github.run_number }}
           name: Shiftipoz v1.0.0 (Build ${{ github.run_number }})
-          draft: false
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Upload to Play Store - ONLY for master branch
-      - name: Upload to Play Store
+      # 4. Upload to Play Store (Internal Testing - Staging branch)
+      - name: Upload to Play Store (Internal Testing)
+        if: github.ref == 'refs/heads/staging'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_CONFIG_JSON }}
+          packageName: com.firoz.shiftipoz
+          releaseFiles: build/app/outputs/bundle/release/app-release.aab
+          track: internal
+          status: completed
+
+      # 5. Upload to Play Store (Production - Master branch)
+      - name: Upload to Play Store (Production)
         if: github.ref == 'refs/heads/master'
         uses: r0adkll/upload-google-play@v1
         with:

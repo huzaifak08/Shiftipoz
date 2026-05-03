@@ -57,9 +57,14 @@ android {
     }
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("release")
+            
+            isMinifyEnabled = true 
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 }
@@ -70,5 +75,7 @@ flutter {
 
 dependencies {
     implementation("androidx.activity:activity-ktx:1.9.0")
+    implementation(platform("com.google.firebase:firebase-bom:34.12.0"))
+    implementation("com.google.firebase:firebase-appcheck-playintegrity")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:shiftipoz/components/custom_loader.dart';
 import 'package:shiftipoz/components/product_card.dart';
 import 'package:shiftipoz/providers/product_provider/product_provider.dart';
 import 'package:shiftipoz/views/add_update_product_view/add_update_product_view.dart';
@@ -105,7 +104,9 @@ class _ProductsViewState extends ConsumerState<ProductsView> {
                     ),
                   );
                 },
-                loading: () => const SliverFillRemaining(child: CustomLoader()),
+                loading: () => const SliverFillRemaining(
+                  child: Center(child: CircularProgressIndicator()),
+                ),
                 error: (e, _) => SliverFillRemaining(
                   child: _ErrorStateView(error: e.toString()),
                 ),
@@ -116,7 +117,7 @@ class _ProductsViewState extends ConsumerState<ProductsView> {
                 const SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.symmetric(vertical: 30),
-                    child: Center(child: CustomLoader(size: 120)),
+                    child: Center(child: CircularProgressIndicator()),
                   ),
                 ),
 

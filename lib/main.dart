@@ -1,5 +1,6 @@
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shiftipoz/cache/init_cache.dart';
@@ -19,7 +20,11 @@ void main() async {
 
   // Firebase App Check:
   FirebaseAppCheck firebaseAppCheck = FirebaseAppCheck.instance;
-  await firebaseAppCheck.activate(providerAndroid: AndroidDebugProvider());
+  await firebaseAppCheck.activate(
+    providerAndroid: kDebugMode
+        ? AndroidDebugProvider()
+        : AndroidPlayIntegrityProvider(),
+  );
   await firebaseAppCheck.getToken().then(
     (value) => dev.log(value.toString(), name: 'App Check Token'),
   );

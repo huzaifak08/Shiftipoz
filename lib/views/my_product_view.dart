@@ -6,6 +6,7 @@ import 'package:shiftipoz/components/product_card.dart';
 import 'package:shiftipoz/helpers/app_data.dart';
 import 'package:shiftipoz/models/product_model.dart';
 import 'package:shiftipoz/providers/my_product_provider/my_product_provider.dart';
+import 'package:shiftipoz/views/add_update_product_view/add_update_product_view.dart';
 
 class MyProductView extends ConsumerWidget {
   const MyProductView({super.key});
@@ -125,7 +126,13 @@ class _ManagementCard extends ConsumerWidget {
                 color: theme.colorScheme.primary.withValues(alpha: 0.1),
                 textColor: theme.colorScheme.primary,
                 onTap: () {
-                  // Todo: Navigate to Edit View
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          AddUpdateProductView(productModel: product),
+                    ),
+                  );
                 },
               ),
             ),

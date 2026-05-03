@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shiftipoz/components/delete_dialog.dart';
@@ -9,6 +10,7 @@ import 'package:shiftipoz/providers/chat_provider/chat_provider.dart';
 import 'package:shiftipoz/providers/my_product_provider/my_product_provider.dart';
 import 'package:shiftipoz/providers/user_provider/user_provider.dart';
 import 'package:shiftipoz/utils/date_formatter.dart';
+import 'package:shiftipoz/utils/email_utils.dart';
 import 'package:shiftipoz/views/add_update_product_view/add_update_product_view.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -97,7 +99,13 @@ class _ProductDetailViewState extends ConsumerState<ProductDetailView> {
           ),
 
           // 3. STICKY BOTTOM ACTIONS
-          _buildBottomActions(context, isOwner, theme, widget.product),
+          _buildBottomActions(
+            context,
+            isOwner,
+            theme,
+            widget.product,
+            authUser,
+          ),
         ],
       ),
     );
@@ -346,7 +354,19 @@ class _ProductDetailViewState extends ConsumerState<ProductDetailView> {
     bool isOwner,
     ThemeData theme,
     ProductModel product,
+    User? authUser,
   ) {
+    final seller = ref.read(userProfileProvider(widget.product.ownerId)).value;
+
+    if (seller == null) {
+      return _LargeButton(
+        label: "NO SELLER",
+        icon: Icons.auto_awesome,
+        color: theme.colorScheme.primary,
+        onTap: () {},
+      );
+    }
+
     return Positioned(
       bottom: 0,
       left: 0,
@@ -431,7 +451,35 @@ class _ProductDetailViewState extends ConsumerState<ProductDetailView> {
                             label: "I'M INTERESTED",
                             icon: Icons.auto_awesome,
                             color: theme.colorScheme.primary,
-                            onTap: () {},
+                            onTap: () async {
+                              if (authUser?.email == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      "Please Register/Login to send Email to Owner",
+                                    ),
+                                  ),
+                                );
+                              }
+                              bool isEmailSend = await sendProductInquiry(
+                                ownerEmail: seller?.email ?? "No Email Address",
+                                productName: product.title,
+                                productType: product.categoryType.name,
+                              );
+
+                              if (!isEmailSend) {
+                                ScaffoldMessenger.of(
+                                  AppData.shared.navigatorKey.currentContext ??
+                                      context,
+                                ).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      "Facing some issue while sending email. Please try again",
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
                           ),
                         ),
                       ],

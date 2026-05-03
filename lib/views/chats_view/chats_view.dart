@@ -167,9 +167,16 @@ class _ChatViewState extends ConsumerState<ChatView> {
   }
 
   Widget _buildProductContextBar(ThemeData theme) {
-    if (widget.chat.activeProductContext == null) {
+    // 1. Safety check for the context itself
+    final context = widget.chat.activeProductContext;
+    if (context == null) {
       return const SizedBox.shrink();
     }
+
+    // 2. Extract values safely with fallbacks
+    final String imageUrl = context['image'] ?? '';
+    final String title = context['title'] ?? 'Unknown Product';
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
       color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
@@ -177,12 +184,35 @@ class _ChatViewState extends ConsumerState<ChatView> {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: Image.network(
-              widget.chat.activeProductContext!['image'],
-              width: 40,
-              height: 40,
-              fit: BoxFit.cover,
-            ),
+            child: imageUrl.isNotEmpty
+                ? Image.network(
+                    imageUrl,
+                    width: 40,
+                    height: 40,
+                    fit: BoxFit.cover,
+                    // 3. Handle 404s or broken URLs
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      width: 40,
+                      height: 40,
+                      color: theme.colorScheme.errorContainer,
+                      child: const Icon(Icons.broken_image, size: 20),
+                    ),
+                    // Optional: Show a shimmer while loading
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Container(
+                        width: 40,
+                        height: 40,
+                        color: theme.colorScheme.surfaceContainerHigh,
+                      );
+                    },
+                  )
+                : Container(
+                    width: 40,
+                    height: 40,
+                    color: theme.colorScheme.surfaceContainerHigh,
+                    child: const Icon(Icons.inventory_2, size: 20),
+                  ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -190,11 +220,13 @@ class _ChatViewState extends ConsumerState<ChatView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  widget.chat.activeProductContext!['title'],
+                  title,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 Text("Discussing this item", style: theme.textTheme.bodySmall),
               ],
