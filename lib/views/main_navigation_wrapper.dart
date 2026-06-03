@@ -16,7 +16,7 @@ class MainNavigationWrapper extends ConsumerWidget {
 
     // Our 5 main views
     final List<Widget> pages = [
-      const HomeView(), // 0: Unit Conversion
+      // const HomeView(), // 0: Unit Conversion
       const ProductsView(), // 1: Marketplace
       const MyProductView(), // 2: User's Own Products (NEW)
       const InboxView(),
@@ -67,39 +67,32 @@ class _BeautifulBottomBar extends StatelessWidget {
             MainAxisAlignment.spaceEvenly, // Use spaceEvenly for 5 items
         children: [
           _NavBarItem(
-            icon: Icons.swap_horiz_rounded,
-            label: "Convert",
-            isSelected: selectedIndex == 0,
-            onTap: () => onTap(0),
-            theme: theme,
-          ),
-          _NavBarItem(
             icon: Icons.local_mall_rounded,
             label: "Market",
-            isSelected: selectedIndex == 1,
-            onTap: () => onTap(1),
+            isSelected: selectedIndex == 0,
+            onTap: () => onTap(0),
             theme: theme,
           ),
           // --- NEW TAB ---
           _NavBarItem(
             icon: Icons.inventory_2_rounded,
             label: "Inventory",
-            isSelected: selectedIndex == 2,
-            onTap: () => onTap(2),
+            isSelected: selectedIndex == 1,
+            onTap: () => onTap(1),
             theme: theme,
           ),
           _NavBarItem(
             icon: Icons.chat_bubble_outline_rounded,
             label: "Chats",
-            isSelected: selectedIndex == 3,
-            onTap: () => onTap(3),
+            isSelected: selectedIndex == 2,
+            onTap: () => onTap(2),
             theme: theme,
           ),
           _NavBarItem(
             icon: Icons.person_outline_rounded,
             label: "Profile",
-            isSelected: selectedIndex == 4,
-            onTap: () => onTap(4),
+            isSelected: selectedIndex == 3,
+            onTap: () => onTap(3),
             theme: theme,
           ),
         ],
