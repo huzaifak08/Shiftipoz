@@ -20,6 +20,8 @@ class _ProductsViewState extends ConsumerState<ProductsView> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final uiNotifier = ref.read(productsUiProvider.notifier);
       uiNotifier.scrollController.addListener(() {
+        if (!mounted) return;
+
         if (uiNotifier.scrollController.position.pixels >=
             uiNotifier.scrollController.position.maxScrollExtent - 400) {
           _loadMore();
