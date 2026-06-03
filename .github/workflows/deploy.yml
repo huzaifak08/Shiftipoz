@@ -87,5 +87,4 @@ jobs:
           releaseFiles: build/app/outputs/bundle/release/app-release.aab
           track: production
           status: completed
-          changesNotSentForReview: true
           whatsNewDirectory: distribution/whatsnew
