@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shiftipoz/providers/navigation_provider/navigation_provider.dart';
-import 'package:shiftipoz/views/home_view.dart';
 import 'package:shiftipoz/views/inbox_view.dart';
 import 'package:shiftipoz/views/my_product_view.dart';
 import 'package:shiftipoz/views/products_view/products_view.dart';
